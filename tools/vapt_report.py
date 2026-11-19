@@ -54,12 +54,27 @@ def produce(scope_file: Path, output: Path) -> dict:
         raise ValueError("Synthetic role evidence is for another engagement")
     if baseline and baseline.get("origin") != scope["target"]:
         raise ValueError("Baseline origin is from a different engagement")
+    zap_attribution = (zap.get("execution_attribution", "EXTERNAL_UNVERIFIED")
+                       if zap else "NOT_ATTESTED")
+    runner_parity = (zap_attribution == "RUNNER_RECORDED" and
+                     zap.get("integrity_status") == "WITCHDOG_RUNNER_RECEIPT_MATCHED")
+    state = manifest.get("execution_state", "NOT_RUN") if manifest else "NOT_RUN"
+    if runner_parity and state == "COMPLETE":
+        zap_stage = "EXECUTED"
+    elif runner_parity and state == "COMPLETE_WITH_WARNINGS":
+        zap_stage = "EXECUTED_WITH_WARNINGS"
+    elif zap:
+        zap_stage = "EXTERNAL_UNVERIFIED"
+    elif state.startswith("HELD"):
+        zap_stage = "HELD"
+    elif state in ("STARTED", "PARTIAL", "COMPLETE", "COMPLETE_WITH_WARNINGS"):
+        zap_stage = "PARTIAL"
+    else:
+        zap_stage = "NOT_RUN"
     stages = {
         "baseline": ("EXECUTED" if baseline and baseline.get("state") == "OBSERVED"
                      else "NOT_RUN"),
-        "zap": ("EXECUTED" if manifest and manifest.get("execution_state") == "COMPLETE"
-                and zap else "PARTIAL" if manifest and manifest.get("execution_state")
-                in ("STARTED", "PARTIAL", "COMPLETE") else "NOT_RUN"),
+        "zap": zap_stage,
         "synthetic_authz": ("EXECUTED" if authz and
                             authz.get("status") == "COMPLETED_WITH_EXPECTED_STATUSES"
                             else "PARTIAL" if authz else "NOT_RUN"),
@@ -78,6 +93,9 @@ def produce(scope_file: Path, output: Path) -> dict:
         "assurance": "SCOPED_VAPT_PARTIAL",
         "stages": stages,
         "dynamic_scanner_candidates": len(alerts),
+        "zap_execution_attribution": zap_attribution,
+        "zap_integrity_status": zap.get("integrity_status", "UNKNOWN") if zap else "NOT_RUN",
+        "prior_audit_findings": "NOT_REVIEWED_NO_PRIVATE_REGISTER",
         "synthetic_authz_unexpected_statuses": len(suspects),
         "untested_high_impact": HIGH_IMPACT,
         "findings": [
@@ -93,6 +111,8 @@ def produce(scope_file: Path, output: Path) -> dict:
         "limitations": [
             "Coverage is scoped to approved paths and tools, not a full application assessment.",
             "No independent verification of ZAP alerts or authz mismatch is implied.",
+            "Direct external -autorun runs are UNVERIFIED without a matching runner receipt and cannot be upgraded by editing a manifest.",
+            "ZAP code 2 can represent a completed plan with warnings; root-cause review is still required.",
             "An app can retain historical Critical findings even if the new scan finds none.",
             "Raw private ZAP reports can contain sensitive response content; do not upload to LLM.",
             "External network guard, real synthetic data and recovery snapshots are operator attestations.",
@@ -119,6 +139,7 @@ def produce(scope_file: Path, output: Path) -> dict:
         lines.append("| " + safe(key) + " | " + safe(value) + " |")
     lines += [
         "", "## Evidence requiring review", "",
+        "- ZAP execution attribution: " + safe(zap_attribution),
         "- Dynamic scanner alerts (unverified candidates): " + str(len(alerts)),
         "- Synthetic authorization status mismatches (unverified): " + str(len(suspects)),
         "", "| Engine | Candidate | Risk hint | Verification |",

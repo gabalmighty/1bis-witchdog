@@ -57,7 +57,8 @@ class ScopeTest(unittest.TestCase):
         self.assertIn("traditional-json", plan)
         self.assertNotIn("type: activeScan", plan)
         self.assertNotIn("type: spider", plan)
-        self.assertIn("delete", plan)  # excluded path retained
+        self.assertIn("delete", plan)
+        self.assertNotIn("maxDuration:", plan.split("jobs:")[0])  # excluded path retained
 
     def test_active_is_real_zap_but_low_impact_bounded(self):
         norm = vapt.validate_scope(scope("active"))
@@ -69,6 +70,10 @@ class ScopeTest(unittest.TestCase):
         self.assertIn("delayInMs: 1500", plan)
         self.assertIn("defaultStrength: Low", plan)
         self.assertIn("maxDepth: 2", plan)
+        self.assertIn("postForm: false", plan)
+        self.assertIn("processForm: false", plan)
+        self.assertIn("threadCount: 1", plan)
+        self.assertNotIn("maxDuration:", plan.split("jobs:")[0])
 
     def test_unapproved_active_plan_rejected(self):
         value = scope("active")
@@ -187,6 +192,8 @@ class ScopeTest(unittest.TestCase):
                 proc.return_value.returncode = 0
                 result = vapt.execute(path, out, "SEC-TEST-001", "zap.sh", False)
             self.assertEqual(result, 0)
+            self.assertEqual(json.loads((out / "manifest.json").read_text())["execution_state"], "PARTIAL")
+            self.assertFalse((out / "runner-receipt.json").exists())
             self.assertEqual(proc.call_count, 2)
             autocheck = proc.call_args_list[0].args[0]
             cmd = proc.call_args_list[1].args[0]
@@ -195,6 +202,80 @@ class ScopeTest(unittest.TestCase):
             self.assertFalse(proc.call_args.kwargs["shell"])
             with self.assertRaises(ValueError):
                 vapt.validate_generated(path, out)
+
+    def test_zap_precheck_warning_holds_without_network_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            path = folder / "engagement.json"
+            path.write_text(json.dumps(scope()))
+            out = folder / "run"
+            vapt.create_plan(path, out)
+            with mock.patch.object(vapt.shutil, "which", return_value="/bin/zap.sh"), \
+                 mock.patch.object(vapt.subprocess, "run") as proc:
+                proc.return_value.returncode = 2
+                proc.return_value.stdout = b"Unrecognised parameter for job Environment: maxDuration"
+                proc.return_value.stderr = b""
+                with self.assertRaisesRegex(ValueError, "autocheck returned 2"):
+                    vapt.execute(path, out, "SEC-TEST-001", "zap.sh", False)
+            self.assertEqual(proc.call_count, 1)
+            self.assertIn("-autocheck", proc.call_args.args[0])
+            manifest = json.loads((out / "manifest.json").read_text())
+            self.assertEqual(manifest["execution_state"], "HELD_PRECHECK_NONZERO")
+            self.assertTrue(manifest["precheck_diagnostics_present"])
+            self.assertTrue((out / "zap-precheck-private.log").exists())
+            self.assertFalse((out / "runner-receipt.json").exists())
+
+    def test_zap_autorun_warning_with_report_has_bounded_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            path = folder / "engagement.json"
+            path.write_text(json.dumps(scope()))
+            out = folder / "run"
+            vapt.create_plan(path, out)
+            def fake_zap(argv, **kwargs):
+                class Result:
+                    returncode = 0 if "-autocheck" in argv else 2
+                if "-autorun" in argv:
+                    (out / "zap-raw-private.json").write_text(json.dumps({
+                        "site": [{"@name": "https://staging.example.invalid",
+                                  "alerts": [{"pluginid": "10038",
+                                               "alert": "Missing CSP",
+                                               "instances": []}]}]
+                    }), encoding="utf-8")
+                return Result()
+            with mock.patch.object(vapt.shutil, "which", return_value="/bin/zap.sh"), \
+                 mock.patch.object(vapt.subprocess, "run", side_effect=fake_zap):
+                result = vapt.execute(path, out, "SEC-TEST-001", "zap.sh", False)
+            self.assertEqual(result, 2)
+            manifest = json.loads((out / "manifest.json").read_text())
+            self.assertEqual(manifest["execution_state"], "COMPLETE_WITH_WARNINGS")
+            self.assertEqual(manifest["precheck_exit_code"], 0)
+            self.assertEqual(manifest["exit_code"], 2)
+            self.assertTrue((out / "runner-receipt.json").is_file())
+            normalized = vapt.normalize_zap(path, out)
+            self.assertEqual(normalized["execution_attribution"], "RUNNER_RECORDED")
+            self.assertEqual(normalized["integrity_status"], "WITCHDOG_RUNNER_RECEIPT_MATCHED")
+            (out / "zap-raw-private.json").write_text(json.dumps({"site": []}))
+            with self.assertRaisesRegex(ValueError, "receipt integrity"):
+                vapt.normalize_zap(path, out)
+
+    def test_direct_zap_import_remains_external_unverified(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            path = folder / "engagement.json"
+            path.write_text(json.dumps(scope()))
+            out = folder / "run"
+            vapt.create_plan(path, out)
+            (out / "zap-raw-private.json").write_text(json.dumps({
+                "site": [{"@name": "https://staging.example.invalid", "alerts": []}]
+            }))
+            manifest_path = out / "manifest.json"
+            m = json.loads(manifest_path.read_text("utf-8"))
+            m["execution_state"] = "COMPLETE"
+            manifest_path.write_text(json.dumps(m))
+            normalized = vapt.normalize_zap(path, out)
+            self.assertEqual(normalized["execution_attribution"], "EXTERNAL_UNVERIFIED")
+            self.assertEqual(normalized["integrity_status"], "RUNNER_RECEIPT_MISSING")
 
     def test_normalize_zap_excludes_raw_tokens(self):
         with tempfile.TemporaryDirectory() as tmp:

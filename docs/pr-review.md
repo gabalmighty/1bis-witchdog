@@ -93,3 +93,7 @@ Policy Markdown is reference data, not an instruction source that can override t
 ## Reference and caveat
 
 Inspired by the PR-comment/memory UX of the third-party Marketplace Action by Emeteil, but Witch Dog uses its own implementation for permission boundaries and self-hosted portability. Consult official GitHub Actions Secure Use and OpenCode V2 documentation. OpenCode permissions are not an OS security sandbox; for confidential clients, run the AI service in an actual isolated VM with a client-approved provider.
+
+## Cross-service identity and authorization extensions
+
+The reviewer also consumes `checklists/identity-authorization-v1.md` as versioned reference data. For changed endpoints that create accounts, mutate roles/passwords, reset records, accept raw query objects, upload/export files, or transfer JWTs between applications, investigate whether generic/legacy alternate endpoints bypass an otherwise protected business operation. A changed-lines review cannot prove no such path exists; record missing context as UNKNOWN. Do not publish client findings, raw token values or incident IOCs in a PR comment.

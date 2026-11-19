@@ -302,6 +302,34 @@ This checklist now supports an **engagement-scoped VAPT** execution path in addi
 
 **VAPT quality gate:** valid RoE, exact scope, real test execution, meaningful route/role/test coverage, reproducible sanitized evidence, independent review of scanner candidates, prioritized remediation ownership and a deployed retest. Otherwise report `SCOPED_VAPT_PARTIAL` with deferred controls. Active tests in particular must respect synthetic data, approved exclusions, recovery snapshot and network egress limits. See [execution guidance](../docs/vapt-execution.md).
 
+## WEB-14 — Cross-service identity and route completeness (source/controlled UAT)
+
+These controls extend WEB-03/04/07/08 for multi-app identity providers, alternate endpoints and data-layer trust boundaries. Review source first and use ONLY approved synthetic fixtures for dynamic assertions; no production credentials, cross-tenant employee data or destructive reset attempts.
+
+| ID | Test objective | Tier | Evidence |
+|---|---|---|---|
+| WEB-14.01 | Map token issuers, relying services, audience, algorithm, key selection, expiry and revocation | S/U | Service trust graph and synthetic reject/accept cases |
+| WEB-14.02 | Reject hardcoded fallback signing secrets, unbounded candidate keys, and stale/invalid roles | S/U | Private source review, current-account resolution and rotation proof |
+| WEB-14.03 | Authenticate/authorize every create, update, bulk, delete and destructive route server-side | S/U | Full method/route/actor matrix, staging negative tests |
+| WEB-14.04 | Check protected specialized APIs against generic, legacy, admin and import alternatives with same effect | S/U | Business operation→all entrypoints→same permission invariant |
+| WEB-14.05 | Keep org/tenant predicates server owned for search, aggregation, CRUD, uploads, exports and counts | S/U | Two synthetic tenants and scalar-validated NoSQL filter fixture |
+| WEB-14.06 | Check auth exclusion lists and suffix/path-name comparisons for bypass-like routes | S/U | Deny-by-default lookalike path fixtures |
+| WEB-14.07 | Revoke delegated/rater/manager access as soon as assignments or roles change | S/U | Removed actor and stale session tests |
+| WEB-14.08 | Protect inter-app token handoffs against tokens in URLs and unintended logs/history | S/U | One-time bounded synthetic handoff |
+| WEB-14.09 | Detect browser XSS/active upload/token exposure chains without storing raw payloads in LLM context | S/U | Isolated synthetic HTML/upload fixture and session policy |
+| WEB-14.10 | Require audit and recoverability on destructive business operations | S/U | Low-privilege denial, approved synthetic test and audit trail |
+| WEB-14.11 | Evaluate dormant external/encoded configuration artifacts without executing them | S | Attribution/provenance checks and offline evidence |
+| WEB-14.12 | Preserve source-proven defects as open until the actual deployed route/artifact is independently retested | S/U | Source, runtime, and remediation evidence separated |
+
+[Witch Dog identity and authorization checklist](identity-authorization-v1.md) supplies concrete review and safe regression design. A root-only ZAP passive scan cannot evaluate these controls; mark them UNKNOWN if no source/fixture authority.
+
+### ZAP evidence and execution gate
+
+- An Automation Framework `-autocheck` nonzero (including exit 2) is a HOLD and **must not** be bypassed with direct `-autorun`; debug installed add-on/plan version and regenerate.
+- After a clean precheck, `-autorun` exit 2 can mean warnings. With a complete bounded raw report and matching runner receipt, classify `EXECUTED_WITH_WARNINGS` and require reviewer analysis, not automatic PASS.
+- Direct external tool output can still be triaged privately, but its execution provenance is `EXTERNAL_UNVERIFIED` unless independently qualified.
+- Two scanners observing one homepage do **not** establish route, role, injection or manual VAPT coverage; count unique exercised endpoints and methods, and preserve high-risk UNKNOWN.
+
 ## Default BASELINE coverage map
 
 A single request to `/` can **only** support a small, explicitly enumerated set: `WEB-00.01` as operator attestation, `WEB-01.01` DNS class, `WEB-01.03` response/redirect, `WEB-02.01` HTTPS certificate validity, `WEB-02.03`–`WEB-02.09` selected header presence, and `WEB-05.01` cookie *flag metadata*. Some checks depend on response availability.

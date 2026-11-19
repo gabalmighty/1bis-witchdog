@@ -17,3 +17,9 @@
 ## Agentic PR security review routing
 
 If the task is to ADOPT Witch Dog in a target repo/CI, follow review_setup_prompt.md and docs/pr-review.md. If the task is to REVIEW an existing PR, run the versioned tools/pr_review.py deterministic scan, optional explicitly approved isolated OpenCode analysis, and optionally a separate tools/pr_publish.py publication. Do not run PR checkout code, Git hooks, dependency installations, target tests or builds in the same credential-bearing process; those belong to an isolated CI test job. Free AI models may retain source code. Never assume the free model or provider is currently available. If the policy refresh fails, use reviewed bundled policy with explicit PARTIAL state. The model is never given GitHub write token, shell/edit/web tools or production credentials. External fork PRs are not eligible for secret-bearing default Action. PR security review is not VAPT or live security certification.
+
+## Source-audit and ZAP execution safeguards (2026-11-20)
+
+For cross-service identity, authorization and source audits, use `checklists/identity-authorization-v1.md` alongside the other checklists. Map every method, route, role, object/tenant boundary and generic/legacy alternate entrypoint. A source defect is not live exploit or malware-eradication proof.
+
+If ZAP `-autocheck` is nonzero, including 2, HOLD. Never invoke direct `-autorun` as an agent workaround. An `-autorun` exit 2 after successful precheck means a warning-bearing run only when a bounded report and matching runner receipt exist. External imports without such receipts remain `EXTERNAL_UNVERIFIED`; a hand-edited manifest cannot upgrade them. Read `docs/security-lessons-20261120.md`.

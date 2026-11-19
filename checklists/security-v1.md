@@ -68,6 +68,23 @@
 | D09 | XSS, SQL/command injection, untrusted uploads, CSV formula injection | Static & isolated tests |
 | D10 | Machine credentials, least privilege, revocation | IAM and scopes |
 
+### Cross-service identity and authorization lessons (source-informed)
+
+| ID | Check | Required verification |
+|---|---|---|
+| D11 | Map all identity issuers and relying applications, signing keys, key rotation, issuer/audience constraints and claim authorization sources | Trust graph and current actor resolution; do not accept fallback/shared default secrets |
+| D12 | Inventory every sensitive method/route including creation, bulk, password change, uploads and destructive reset | Method→middleware→service→actor/role→object/tenant→audit matrix |
+| D13 | Compare protected specialist endpoints with generic/legacy/bulk alternatives that perform the same business operation | Equivalent permissions and tenant policy at service/data layer |
+| D14 | Check dynamic auth-skip lists, suffix/subpath matchers, optional middleware and false identity resolution | Synthetic lookalike path cases and deny-default |
+| D15 | Validate current user status, role changes, delegation and tenant membership on each request; revoke stale authority | Demoted/removed user and removed manager/rater synthetic tests |
+| D16 | Check multi-service token transfer and avoid long-lived tokens in query strings and persistent browser storage | Approved one-time handoff scheme; logs/referrer/browser retention |
+| D17 | Review untrusted Mongo/NoSQL filters, aggregate pipelines and organization-scoped data selection | Schema/operator validation plus server-owned tenant constraints |
+| D18 | Verify uploaded media/downloads/exports require appropriate actor and object ACL; inspect active file types | Synthetic cross-tenant file/download tests and safe static serving |
+| D19 | Require proportionate privileges, confirmation, recoverability and audit for destructive operations | Synthetic denied/allowed role cases and audit evidence |
+| D20 | Treat cross-control attack chains (XSS→browser token→API; secret→JWT→tenant data) as hypotheses until safely verified | Trust-boundary map and independent reproduction evidence |
+
+See [identity and authorization checklist](identity-authorization-v1.md). Source-verified defects do not imply current live exploitation or full host-level malware eradication.
+
 ## E. Secrets and privacy
 
 | ID | Check | Required verification |
