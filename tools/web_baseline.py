@@ -8,6 +8,7 @@ DNS answers are checked *and pinned to the TCP connection* to resist rebinding.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import datetime as dt
 import http.client
 import ipaddress
@@ -291,6 +292,21 @@ def main(argv=None):
             path.write_text(content, encoding="utf-8")
             if os.name == "posix":
                 os.chmod(path, 0o600)
+        # Digests support evidence integrity and run reproducibility; not publisher authenticity.
+        project = Path(__file__).resolve().parents[1]
+        def digest(path):
+            return hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+        manifest = {
+            "schema_version": 1,
+            "report_sha256": digest(output / "report.json"),
+            "web_prompt_sha256": digest(project / "web_prompt.md"),
+            "checklist_sha256": digest(project / "checklists" / "webapp-vapt-v1.md"),
+            "note": "SHA-256 evidence identifiers only; no authenticity/signature claim"
+        }
+        manifest_path = output / "manifest.json"
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        if os.name == "posix":
+            os.chmod(manifest_path, 0o600)
     except OSError:
         print("Witch Dog HOLD: failed to write private local report", file=sys.stderr)
         return 2

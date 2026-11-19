@@ -9,7 +9,7 @@
 - Performs **one GET request to `/` only**; no follow-up on redirects, no spiders, no authentication or parameter injection.
 - Inspects TLS handshake validity (HTTPS) and selected HTTP response headers; summarizes cookie **flag presence, never values**.
 - Records `REMOTE_OBSERVED` for what the edge responded with, and `UNKNOWN` for untested authorization, app routes, origin build, ingress and storage.
-- Returns a local `report.json` and `report.md` under the operator's explicit output directory. Private customer evidence belongs there, not in this public Git repository.
+- Returns a local `report.json` , `report.md` and a SHA-256 `manifest.json` under the operator's explicit output directory. Private customer evidence belongs there, not in this public Git repository.
 - The baseline is **not** a port, vulnerability or malware scan. Browser, JS, GraphQL, WebSocket, API, active payload and authentication tests remain separate.
 
 ## Quick start
@@ -29,6 +29,14 @@ python3 tools/web_baseline.py --target http://127.0.0.1:8080 --authorized --allo
 ```
 
 The lab switches are deliberate and should not be baked into unattended production schedules. The scanner checks only the specified origin. Reject a publicly accessible reverse proxy that redirects to an internal host; do not auto-follow. A public CDN/WAF header observation is *not* proof of the private origin's security.
+
+Validate JSON after a run:
+
+```bash
+python3 tools/validate_web_report.py --report .witchdog/web-runs/report.json
+```
+
+A successful schema gate proves only that the reported structure is consistent and within the bounded request budget. SHA-256 evidence hashes are **not** signatures or release authenticity.
 
 ### Prompt invocation
 

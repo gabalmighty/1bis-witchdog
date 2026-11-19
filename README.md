@@ -65,7 +65,7 @@ Or run a deterministic HTTPS baseline without an AI model:
 python3 tools/web_baseline.py --target https://YOUR-STAGING-APP.example --authorized --output .witchdog/web-runs
 ```
 
-Windows PowerShell: replace `python3` with `py -3`. `--authorized` affirms permission to inspect that **exact** origin. The baseline makes **one** GET request to `/`, verifies TLS, observes selected headers and cookie flags, and does not follow redirects, crawl, authenticate, fuzz or exploit. Most VAPT controls remain `UNKNOWN` until separately authorized UAT/manual work. See [website testing guidance](docs/webapp-testing.md).
+Windows PowerShell: replace `python3` with `py -3`. `--authorized` affirms permission to inspect that **exact** origin. The baseline makes **one** GET request to `/`, verifies TLS, observes selected headers and cookie flags, and does not follow redirects, crawl, authenticate, fuzz or exploit. Most VAPT controls remain `UNKNOWN` until separately authorized UAT/manual work. Reports remain private in `.witchdog/web-runs/`; `manifest.json` contains SHA-256 evidence identifiers (not signatures). Run `python3 tools/validate_web_report.py --report .witchdog/web-runs/report.json` to enforce the baseline report contract. See [website testing guidance](docs/webapp-testing.md).
 
 ## How it works
 
