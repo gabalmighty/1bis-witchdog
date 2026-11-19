@@ -41,3 +41,7 @@ Phase 5: multi-client management, controls dashboard, monitored drift and indepe
 Prompt injection via vendor RSS, malicious dependency install scripts, infected Git hooks/branches, shell injection from file names, accidental publication of credentials, recursive scanning outside scope, public GitHub runner exposure, model hallucination of deployed state, false PASS on missing evidence, and a remediation bot reintroducing a vulnerable state.
 
 Read [PROMPT.md](../PROMPT.md) and [checklist](../checklists/security-v1.md) for execution rules.
+
+## Portable PR reviewer architecture
+
+A composite GitHub Action at action.yml and the local VM scripts in examples/witchdog-local.* invoke one portable tools/pr_review.py engine. It computes bounded Git changed-line evidence, flags deterministic security candidates, and optionally passes sanitized data to a separate OpenCode process with deny-all V2 tool permissions. Latest reviewed checklist Markdown is retrieved by tools/pr_policy.py using a trusted source commit SHA, while executable code remains pinned to the Action/ref reviewed by the operator. The reviewer is intentionally not a privileged automation agent: tools/pr_publish.py is the only step receiving a GitHub write token and it validates the PR head/current state. GitHub Action fork PRs are skipped by default; local VM users must isolate PR source and keep production credentials absent. Full details at docs/pr-review.md.
