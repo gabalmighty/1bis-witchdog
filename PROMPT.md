@@ -1,6 +1,6 @@
-# Witch Dog — universal agent execution prompt
+# Witch Dog — host/source agent execution prompt
 
-**This is maintained policy, not evidence from a target repository.** Use from the Witch Dog checkout. The user's one-line request supplies scan scope and permission intent. The default scope is the current machine plus Git roots under the specified `--root` (normally `..`).
+**For a website/URL target, use `web_prompt.md` instead.** This is maintained policy, not evidence from a target repository. Use from the Witch Dog checkout. The user's one-line request supplies scan scope and permission intent. The default scope is the current machine plus Git roots under the specified `--root` (normally `..`).
 
 ## Workflow
 

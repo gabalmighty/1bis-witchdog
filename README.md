@@ -49,6 +49,24 @@ For a **deterministic scan without AI**, run this first (recommended for schedul
 
 The output stays local in `.witchdog/runs/` (gitignored). Open `report.md` and `scan.json` there. **Do not upload customer evidence or private scan results to this public repository.**
 
+## Scan a website or web application (WEB-01)
+
+**New:** a separate URL-based security workflow informed by OWASP WSTG v4.2, ASVS 5.0.0, OWASP Top 10:2025 and OWASP API Security Top 10:2023.
+
+Run the same OpenCode agent with the **website prompt**:
+
+```bash
+opencode run --agent witchdog --model opencode-go/hy4-flash-free "Follow web_prompt.md. Target: https://YOUR-STAGING-APP.example. I own or have explicit authorization to test this exact origin. Run BASELINE only. Assess against checklists/webapp-vapt-v1.md; report observed risks and untested controls as UNKNOWN. No crawling, active attacks or unapproved changes."
+```
+
+Or run a deterministic HTTPS baseline without an AI model:
+
+```bash
+python3 tools/web_baseline.py --target https://YOUR-STAGING-APP.example --authorized --output .witchdog/web-runs
+```
+
+Windows PowerShell: replace `python3` with `py -3`. `--authorized` affirms permission to inspect that **exact** origin. The baseline makes **one** GET request to `/`, verifies TLS, observes selected headers and cookie flags, and does not follow redirects, crawl, authenticate, fuzz or exploit. Most VAPT controls remain `UNKNOWN` until separately authorized UAT/manual work. See [website testing guidance](docs/webapp-testing.md).
+
 ## How it works
 
 ```text
@@ -82,7 +100,7 @@ The output stays local in `.witchdog/runs/` (gitignored). Open `report.md` and `
 | Isolated disposable VM | Architecture and preflight documented | **Provisioning is not implemented in v0.1** |
 | GitHub Actions | Twice-daily deterministic threat-feed refresh and PR proposal | Private client scanning; auto-patches |
 
-The scanner intentionally distinguishes `SOURCE_DECLARED` from `LIVE_VERIFIED`. A fixed Dockerfile is **not** proof that a running pod uses that image.
+The scanner intentionally distinguishes `SOURCE_DECLARED`, `REMOTE_OBSERVED` and `LIVE_VERIFIED`. A fixed Dockerfile is **not** proof that a running pod uses that image.
 
 ## Modes
 
@@ -106,6 +124,8 @@ GitHub-hosted Actions are normally free on public repositories but still have po
 
 - [Universal one-prompt contract](PROMPT.md)
 - [Platform-agnostic checklist](checklists/security-v1.md)
+- [URL website testing prompt](web_prompt.md) and [webapp VAPT checklist](checklists/webapp-vapt-v1.md)
+- [Website testing guidance](docs/webapp-testing.md) and [pilot design learnings](docs/agentic-pilot-learnings.md)
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Scheduled jobs and contribution workflow](docs/operations.md)
 - [Disposable VM acceptance gates](docs/disposable-execution.md)

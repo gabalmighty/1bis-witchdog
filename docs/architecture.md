@@ -16,6 +16,10 @@
 4. Git fixes: per-target-repo branch and tests, reviewed PR, separate deploy approval, post-deploy running-image verification; no auto-merge.
 5. Customer tenancy: encrypt/private-store sensitive evidence; retain hashes/metadata for audit; do not publish private findings to Witch Dog.
 
+## Website/URL testing trust boundary
+
+`web_prompt.md` is the separate webapp entry point, sharing the same approval/evidence architecture. `tools/web_baseline.py` makes at most one request to the authorized origin root using pinned DNS, validated TLS and no redirects. It observes selected headers/cookie flags without reading response bodies, and never performs active DAST. Observations are `REMOTE_OBSERVED`, **not** `LIVE_VERIFIED`: a CDN/WAF response is not evidence of the origin's build or security. Authenticated UAT and invasive VAPT require separately approved test identities, scope, safety limits and rollback. See the VAPT checklist and generalized pilot learnings.
+
 ## Suggested expansion
 
 Phase 1: deterministic discovery + public-feed updates + one prompt (shipped bootstrap).
