@@ -99,6 +99,7 @@ def inspect_diff(raw: str, *, limit: int) -> tuple[list[dict], str, dict]:
     line_no = 0
     diff_lines = raw.splitlines()
     count = 0
+    oversized_line = False
     seen = set()
     for line in diff_lines:
         m = RE_DIFF.match(line)
@@ -119,6 +120,8 @@ def inspect_diff(raw: str, *, limit: int) -> tuple[list[dict], str, dict]:
             if file_name is None:
                 continue
             value = line[1:]
+            if len(value) > 600:
+                oversized_line = True
             for control, pattern, severity, reason in RISK_PATTERNS:
                 if pattern.search(value):
                     key = (file_name, line_no, control)
@@ -170,7 +173,8 @@ def inspect_diff(raw: str, *, limit: int) -> tuple[list[dict], str, dict]:
     packet = "\n".join(packet_lines)
     return list(unique.values())[:150], packet[:limit], {
         "paths": len(changed_paths), "added_lines_inspected": count,
-        "packet_truncated": len(packet) > limit, "diff_lines": len(diff_lines),
+        "packet_truncated": len(packet) > limit or oversized_line,
+        "oversized_added_line": oversized_line, "diff_lines": len(diff_lines),
     }
 
 def write(path: Path, data: str) -> None:
