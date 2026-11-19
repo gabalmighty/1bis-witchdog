@@ -15,7 +15,8 @@ from pathlib import Path
 
 ZERO_WIRE = "https://radar.cloudflare.com/security/zero-wire/rss"
 CISA_KEV = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
-ALLOWED = {"radar.cloudflare.com", "www.cisa.gov"}
+CISA_KEV_MIRROR = "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json"
+ALLOWED_URLS = {ZERO_WIRE, CISA_KEV, CISA_KEV_MIRROR}
 MAX_DOWNLOAD = 8_000_000
 MAX_ITEMS = 75
 
@@ -26,7 +27,7 @@ def clean(value, limit=250):
 
 def fetch(url):
     target = urllib.parse.urlparse(url)
-    if target.scheme != "https" or target.hostname not in ALLOWED:
+    if target.scheme != "https" or url not in ALLOWED_URLS:
         raise ValueError("Feed URL is not on the explicit allowlist")
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, request, fp, code, msg, headers, newurl):
@@ -40,6 +41,14 @@ def fetch(url):
         if len(body) > MAX_DOWNLOAD:
             raise ValueError("Feed exceeded maximum size")
         return body
+
+def fetch_kev():
+    """Use the official CISA-maintained KEV GitHub mirror if cisa.gov blocks automated clients."""
+    try:
+        return fetch(CISA_KEV)
+    except (urllib.error.URLError, TimeoutError, OSError):
+        print("CISA primary unavailable; attempting its official GitHub mirror", file=sys.stderr)
+        return fetch(CISA_KEV_MIRROR)
 
 def parse_zero_wire(raw):
     if b"<!DOCTYPE" in raw.upper() or b"<!ENTITY" in raw.upper():
@@ -91,7 +100,7 @@ def build(zero_wire, kev):
 
 def sync(output):
     z = fetch(ZERO_WIRE)
-    k = fetch(CISA_KEV)
+    k = fetch_kev()
     result = build(z, k)
     if output.exists():
         try:

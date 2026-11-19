@@ -30,3 +30,7 @@ Never combine untrusted PR checkout, a powerful GitHub write token and an agent 
 4. Unavailable RSS or malformed KEV input: workflow fails and preserves last known-good data.
 5. Public PR review: inspect that no private path, hostname, .env value or customer address appears.
 6. Simulated advisories for Vite and NGINX: verify source-only vs live verdict separation.
+
+## Public CISA KEV feed resilience
+
+If the official cisa.gov JSON endpoint returns HTTP 403 or another transport error, the collector retries using [CISA's official `cisagov/kev-data` mirror](https://github.com/cisagov/kev-data) (develop branch). Both URLs are exact-allowlisted. An invalid JSON/schema fails the run; no arbitrary redirect or third-party proxy is trusted. The system does not update the maintained intelligence snapshot on a failed run.
