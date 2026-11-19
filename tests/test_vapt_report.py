@@ -82,6 +82,19 @@ class ReportTests(unittest.TestCase):
             self.assertNotIn("PRIVATE_SESSION_DO_NOT_LEAK", text)
             self.assertEqual(result["findings"][0]["status"],
                              "CANDIDATE_NEEDS_INDEPENDENT_VALIDATION")
+    def test_wrong_baseline_origin_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "scope.json"
+            path.write_text(json.dumps(sample_scope()))
+            out = Path(tmp) / "out"
+            vapt.create_plan(path, out)
+            (out / "report.json").write_text(json.dumps({
+                "origin": "https://different-client.example.invalid",
+                "state": "OBSERVED"
+            }))
+            with self.assertRaises(ValueError):
+                reporter.produce(path, out)
+
     def test_wrong_scope_digest_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "scope.json"

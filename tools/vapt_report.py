@@ -40,6 +40,11 @@ def produce(scope_file: Path, output: Path) -> dict:
     if manifest and (manifest.get("scope_sha256") != digest or
                      manifest.get("engagement_id") != scope["id"]):
         raise ValueError("Engagement/manifest digest conflict")
+    if manifest:
+        zap_plan = out / "zap-plan.yaml"
+        if (not zap_plan.is_file() or
+                manifest.get("plan_sha256") != hashlib.sha256(zap_plan.read_bytes()).hexdigest()):
+            raise ValueError("ZAP plan changed after evidence approval")
     zap = load_optional(out / "zap-sanitized.json")
     authz = load_optional(out / "authz-status-matrix.json")
     baseline = load_optional(out / "report.json")
@@ -47,12 +52,14 @@ def produce(scope_file: Path, output: Path) -> dict:
         raise ValueError("ZAP summary belongs to a different engagement")
     if authz and authz.get("source_scope_sha256") != digest:
         raise ValueError("Synthetic role evidence is for another engagement")
+    if baseline and baseline.get("origin") != scope["target"]:
+        raise ValueError("Baseline origin is from a different engagement")
     stages = {
         "baseline": ("EXECUTED" if baseline and baseline.get("state") == "OBSERVED"
                      else "NOT_RUN"),
         "zap": ("EXECUTED" if manifest and manifest.get("execution_state") == "COMPLETE"
                 and zap else "PARTIAL" if manifest and manifest.get("execution_state")
-                in ("STARTED", "PARTIAL") else "NOT_RUN"),
+                in ("STARTED", "PARTIAL", "COMPLETE") else "NOT_RUN"),
         "synthetic_authz": ("EXECUTED" if authz and
                             authz.get("status") == "COMPLETED_WITH_EXPECTED_STATUSES"
                             else "PARTIAL" if authz else "NOT_RUN"),

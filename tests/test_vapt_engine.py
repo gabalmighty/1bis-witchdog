@@ -209,7 +209,7 @@ class ScopeTest(unittest.TestCase):
                          {"pluginid": "40012", "alert": "Reflected XSS",
                           "riskdesc": "High", "confidence": "Medium",
                           "cweid": "79",
-                          "instances": [{"uri": "https://staging.example.invalid/token=FAKE_SECRET",
+                          "instances": [{"uri": "https://staging.example.invalid/__witchdog_test__/health?token=FAKE_SECRET",
                                          "evidence": "FAKE_SECRET",
                                          "attack": "FAKE_SECRET"}]}
                      ]}
@@ -223,6 +223,12 @@ class ScopeTest(unittest.TestCase):
             self.assertEqual(normalized["alerts"][0]["status"],
                              "CANDIDATE_NEEDS_INDEPENDENT_VALIDATION")
             report["site"][0]["@name"] = "https://unowned.example.invalid"
+            (out / "zap-raw-private.json").write_text(json.dumps(report))
+            with self.assertRaises(ValueError):
+                vapt.normalize_zap(path, out)
+            report["site"][0]["@name"] = "https://staging.example.invalid"
+            report["site"][0]["alerts"][0]["instances"][0]["uri"] = (
+                "https://staging.example.invalid/__witchdog_test__/delete")
             (out / "zap-raw-private.json").write_text(json.dumps(report))
             with self.assertRaises(ValueError):
                 vapt.normalize_zap(path, out)

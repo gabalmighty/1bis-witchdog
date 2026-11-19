@@ -381,17 +381,40 @@ def normalize_zap(scope_file: Path, out: Path) -> dict:
         parsed = urlsplit(s)
         if exact_origin(parsed.scheme + "://" + parsed.netloc) != scope["target"]:
             raise ValueError("Out-of-scope ZAP report site; HOLD and inspect privately")
-        for item in site.get("alerts", [])[:300]:
+        site_alerts = site.get("alerts", [])
+        if not isinstance(site_alerts, list):
+            raise ValueError("ZAP site alerts must be a list")
+        for item in site_alerts[:300]:
             if not isinstance(item, dict):
-                continue
+                raise ValueError("Malformed ZAP alert")
             entries = item.get("instances", [])
+            if not isinstance(entries, list) or len(entries) > 10000:
+                raise ValueError("ZAP alert instances invalid")
+            for instance in entries:
+                if not isinstance(instance, dict):
+                    raise ValueError("Malformed ZAP instance")
+                uri = instance.get("uri")
+                if uri is None:
+                    continue  # scope unverified for instances with no URI
+                if not isinstance(uri, str):
+                    raise ValueError("Non-string ZAP instance URI")
+                parsed_uri = urlsplit(uri)
+                try:
+                    observed_origin = exact_origin(parsed_uri.scheme + "://" + parsed_uri.netloc)
+                except (ValueError, UnicodeError) as exc:
+                    raise ValueError("Invalid ZAP instance URI") from exc
+                path = parsed_uri.path or "/"
+                if (observed_origin != scope["target"] or
+                        not within(path, scope["allowed"]) or
+                        within(path, scope["forbidden"])):
+                    raise ValueError("ZAP instance outside authorized origin/paths; HOLD")
             alerts.append({
                 "plugin_id": safe(item.get("pluginid", "unknown"), 20),
                 "name": safe(item.get("alert", "Unknown ZAP alert"), 130),
                 "risk": safe(item.get("riskdesc", "UNKNOWN"), 60),
                 "confidence": safe(item.get("confidence", "UNKNOWN"), 40),
                 "cwe": safe(item.get("cweid", ""), 12),
-                "occurrences": len(entries) if isinstance(entries, list) else 0,
+                "occurrences": len(entries),
                 "status": "CANDIDATE_NEEDS_INDEPENDENT_VALIDATION",
             })
     result = {
