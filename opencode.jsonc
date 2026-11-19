@@ -19,6 +19,9 @@
         {"action": "read", "resource": "*.key", "effect": "deny"},
         {"action": "external_directory", "resource": "*", "effect": "ask"},
         {"action": "shell", "resource": "*", "effect": "ask"},
+        {"action": "shell", "resource": "python3 tools/witchdog.py scan --root .. --output .witchdog/runs", "effect": "allow"},
+        {"action": "shell", "resource": "python tools/witchdog.py scan --root .. --output .witchdog/runs", "effect": "allow"},
+        {"action": "shell", "resource": "py -3 tools/witchdog.py scan --root .. --output .witchdog/runs", "effect": "allow"},
         {"action": "edit", "resource": "*", "effect": "ask"},
         {"action": "webfetch", "resource": "*", "effect": "deny"},
         {"action": "subagent", "resource": "*", "effect": "ask"}

@@ -7,7 +7,7 @@ Clone alongside target repos, then run the universal prompt in the README. To av
 - Linux/macOS: `python3 tools/witchdog.py scan --root .. --output .witchdog/runs`
 - Windows PowerShell: `py -3 tools/witchdog.py scan --root .. --output .witchdog/runs`
 
-Explicitly pass `--root`; output is local, normally `.witchdog/runs/`. No repo editing or remote scanning occurs in the Python scanner. Protect output and avoid publishing it in a public issue/PR.
+Explicitly pass `--root`; output is local, normally `.witchdog/runs/`. The OpenCode Witch Dog agent allows only these three exact baseline shell commands without a separate approval; other shell operations still require approval. This is an agent UX setting, NOT an operating-system security boundary. No repo editing or remote scanning occurs in the Python scanner. Protect output and avoid publishing it in a public issue/PR.
 
 ## Scheduling
 
