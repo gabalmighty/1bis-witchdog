@@ -259,6 +259,25 @@ class ScopeTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "receipt integrity"):
                 vapt.normalize_zap(path, out)
 
+    def test_autorun_success_with_malformed_report_is_partial(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            scope_file = folder / 'scope.json'
+            scope_file.write_text(json.dumps(scope()))
+            out = folder / 'run'
+            vapt.create_plan(scope_file, out)
+            def fake_zap(argv, **kwargs):
+                class Done:
+                    returncode = 0
+                if '-autorun' in argv:
+                    (out / 'zap-raw-private.json').write_text('INVALID REPORT DATA')
+                return Done()
+            with mock.patch.object(vapt.shutil, 'which', return_value='/bin/zap.sh'), \
+                 mock.patch.object(vapt.subprocess, 'run', side_effect=fake_zap):
+                self.assertEqual(vapt.execute(scope_file, out, 'SEC-TEST-001', 'zap.sh', False), 0)
+            manifest = json.loads((out / 'manifest.json').read_text())
+            self.assertEqual(manifest['execution_state'], 'PARTIAL')
+            self.assertFalse((out / 'runner-receipt.json').exists())
     def test_direct_zap_import_remains_external_unverified(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)

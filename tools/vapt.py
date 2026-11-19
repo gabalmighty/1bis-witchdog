@@ -426,7 +426,22 @@ def execute(scope_file: Path, out: Path, approval_ref: str,
         rc = 125
     report = out / "zap-raw-private.json"
     report_ok = (report.is_file() and not report.is_symlink()
-                 and report.stat().st_size <= MAX_ZAP_REPORT)
+                 and 0 < report.stat().st_size <= MAX_ZAP_REPORT)
+    if report_ok:
+        try:
+            raw_report = json.loads(report.read_text("utf-8"))
+            sites = raw_report.get("site") if isinstance(raw_report, dict) else None
+            report_ok = isinstance(sites, list) and len(sites) <= 50
+            for site in (sites or []):
+                if not isinstance(site, dict) or not isinstance(site.get("@name"), str):
+                    report_ok = False
+                    break
+                parsed = urlsplit(site["@name"])
+                if exact_origin(parsed.scheme + "://" + parsed.netloc) != scope["target"]:
+                    report_ok = False
+                    break
+        except (OSError, ValueError, TypeError, UnicodeError, json.JSONDecodeError):
+            report_ok = False
     state = ("COMPLETE" if rc == 0 and report_ok else
              "COMPLETE_WITH_WARNINGS" if rc == 2 and report_ok else "PARTIAL")
     manifest["exit_code"] = rc
