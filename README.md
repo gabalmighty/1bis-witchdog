@@ -29,7 +29,7 @@ For GitHub-hosted review, copy [the sample workflow](examples/witchdog-github-re
 
 ```yaml
 steps:
-  - uses: gabalmighty/1bis-witchdog@main # Pilot only; PIN a reviewed full SHA before production use
+  - uses: gabalmighty/1bis-witchdog@7e9bef9f1d6e354a620555f159a0fb03e4cd7e74 # reviewed PR reviewer implementation
     with:
       enable-ai: 'true'
       approve-code-sharing: 'true'
