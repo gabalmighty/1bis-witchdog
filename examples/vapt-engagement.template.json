@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "engagement": {
+    "id": "WD-DEMO-001",
+    "authorized": false,
+    "approval_ref": "REPLACE_WITH_APPROVAL",
+    "owner_contact": "security@example.invalid",
+    "expires_utc": "2026-11-22T00:00:00Z"
+  },
+  "target": "https://staging.example.invalid",
+  "environment": "staging",
+  "lab_http": false,
+  "lab_private_network_approved": false,
+  "synthetic_data_only": false,
+  "egress_allowlist_enforced": false,
+  "mode": "passive",
+  "active_testing_approved": false,
+  "snapshot_restore_verified": false,
+  "safe_stateful_routes_approved": false,
+  "full_origin_scope_approved": false,
+  "allowed_prefixes": [
+    "/__witchdog_test__/"
+  ],
+  "forbidden_prefixes": [
+    "/__witchdog_test__/delete",
+    "/admin/payroll"
+  ],
+  "seed_paths": [
+    "/__witchdog_test__/health"
+  ],
+  "limits": {
+    "max_duration_minutes": 8,
+    "delay_ms": 1500
+  },
+  "role_token_env": {
+    "employee": "WITCHDOG_EMPLOYEE_TOKEN"
+  },
+  "authz_cases": [
+    {
+      "id": "synthetic-own-record",
+      "path": "/__witchdog_test__/my-record",
+      "method": "GET",
+      "synthetic_fixture": true,
+      "expected": {
+        "anonymous": [
+          401,
+          403
+        ],
+        "employee": [
+          200
+        ]
+      }
+    }
+  ]
+}

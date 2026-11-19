@@ -20,6 +20,14 @@
 
 `web_prompt.md` is the separate webapp entry point, sharing the same approval/evidence architecture. `tools/web_baseline.py` makes at most one request to the authorized origin root using pinned DNS, validated TLS and no redirects. It observes selected headers/cookie flags without reading response bodies, and never performs active DAST. Observations are `REMOTE_OBSERVED`, **not** `LIVE_VERIFIED`: a CDN/WAF response is not evidence of the origin's build or security. Authenticated UAT and invasive VAPT require separately approved test identities, scope, safety limits and rollback. See the VAPT checklist and generalized pilot learnings.
 
+## Agentic VAPT (experimental)
+
+The website baseline is now Stage 0 of an expanded, **authorized, synthetic staging-only** VAPT capability. The agent reads a private engagement, plans deterministic checks, delegates real passive/active dynamic vulnerability testing to an installed OWASP ZAP Automation Framework runner, applies synthetic-user GET authorization matrices, reviews authorized source and proposes fixes. `tools/vapt.py` validates scope, generates ZAP YAML and private evidence hashes; `tools/vapt_authz.py` tests status policy only; `tools/vapt_report.py` assembles a conservative coverage/evidence summary. No VAPT claim can bypass explicit stage evidence.
+
+**Important boundaries:** (1) JSON owner attestations are not independent real-world network enforcement, (2) ZAP activeScan can cause persistent mutations and may probe URLs found during discovery, (3) ZAP in-scope regexes are not a network firewall, (4) raw ZAP HTTP content can be sensitive and is not sent to remote LLMs, (5) synthetic fixture testing does not prove business logic or real-tenant isolation across the entire app. A hardened disposable runner and verified egress policy are separate infrastructure work, not currently created automatically by Witch Dog.
+
+[Read the VAPT execution manual](vapt-execution.md).
+
 ## Suggested expansion
 
 Phase 1: deterministic discovery + public-feed updates + one prompt (shipped bootstrap).

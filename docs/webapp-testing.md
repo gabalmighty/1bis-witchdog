@@ -14,6 +14,12 @@ A fast baseline can be useful, but **one homepage GET is not a VAPT**. The numbe
 - A previous Critical finding is not closed by a later header baseline; carry unresolved findings in the private client register until retested.
 - Scanner elapsed time mostly reflects agent/provider overhead. Use control coverage, accuracy, confidence, safe evidence and reproducibility to evaluate quality.
 
+## Advanced option: real staged VAPT
+
+The one-request web baseline remains a rapid low-impact check. **It is no longer Witch Dog's only web testing mode.** For explicit, verified nonproduction test environments with synthetic records, use `web_prompt.md` with `Mode: AGENTIC_VAPT` and the private rules-of-engagement file described in [VAPT execution](vapt-execution.md). This invokes a scoped OWASP ZAP passive/active scanner plus synthetic-role authorization fixtures and OpenCode investigation, with hard approval and operational boundaries.
+
+The active mode sends actual test inputs and can modify application state. It must run only on an independently restricted, recoverable test deployment. Do not infer nonproduction solely from its URL. If the engine, authorization, safe dataset or network guard is missing, report a HOLD, not a successful VAPT.
+
 ## What the URL scanner actually does
 
 - Requires `--target` and `--authorized`; validates the URL and tests a single origin.
