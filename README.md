@@ -2,19 +2,16 @@
 
 <h1 align="center">Witch Dog</h1>
 
-<div align="center">
+<p align="center"><strong>Agentic Security. Continuous Vigilance.</strong></p>
 
-**Agentic Security. Continuous Vigilance.**
 
-[![Status: experimental](https://img.shields.io/badge/status-experimental-orange)](#project-status)
+[![Status: experimental](https://img.shields.io/badge/status-experimental-orange)](#where-it-runs)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](#requirements)
 [![Windows / Linux / macOS](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-444.svg)](#where-it-runs)
 [![Intelligence refresh](https://github.com/gabalmighty/1bis-witchdog/actions/workflows/intelligence.yml/badge.svg)](.github/workflows/intelligence.yml)
 
 *One checklist. One prompt. Your environment.*
-
-</div>
 
 Witch Dog is an **open-source, model-agnostic security investigation kit** combining deterministic host/repository inspection, continuously refreshed public threat intelligence, and human-supervised AI-assisted security fixes. Works with OpenCode and any provider/model supported by your OpenCode installation.
 
