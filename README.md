@@ -49,6 +49,28 @@ For a **deterministic scan without AI**, run this first (recommended for schedul
 
 The output stays local in `.witchdog/runs/` (gitignored). Open `report.md` and `scan.json` there. **Do not upload customer evidence or private scan results to this public repository.**
 
+## Agentic web application VAPT (experimental)
+
+Witch Dog now goes beyond the **one-request baseline**: for an authorized **synthetic staging/lab** deployment, it can combine OWASP ZAP passive scanning, bounded **active injection testing**, safe multi-role authorization assertions, code/dependency review and AI-guided follow-up. It uses the existing web checklist, but runs the tests through a **private rules-of-engagement file** with explicit approval and network/impact gates.
+
+**One prompt to copy into OpenCode** (replace the URL with an app you own or are explicitly authorized to assess):
+
+```text
+Follow web_prompt.md. Target: https://YOUR-STAGING-APP.example. Mode: AGENTIC_VAPT. Start with an engagement preflight; if no approved private scope exists, prepare one for my review. With the approved scope, combine deterministic baseline, OWASP ZAP passive/active testing, synthetic-user authorization checks and authorized source-code analysis. Investigate and reproduce suspected findings only within the test scope; return a detailed evidence-backed VAPT report and propose reviewable fixes. Do not claim completion of untested controls or modify production.
+```
+
+The agent will generate a private engagement draft if needed. **It cannot self-approve testing**. To prepare an engagement deterministically:
+
+```bash
+python3 tools/vapt.py init --target https://YOUR-STAGING-APP.example --output .witchdog/vapt/my-engagement
+```
+
+Review the generated `engagement.json` (all authority and isolation fields default to **false**) and follow the [VAPT execution manual](docs/vapt-execution.md). The active mode runs **real ZAP scanner test inputs** through an installed trusted ZAP binary after passing the approval/egress/synthetic-data/snapshot gates. The tests may modify **test** application state. A URL's appearance or unofficial domain name is not proof of a safe non-production environment.
+
+For authorized multi-role GET fixtures, `tools/vapt_authz.py` checks expected status codes using tokens supplied **only through local environment variables**, without collecting response bodies or credentials. Use `tools/vapt_report.py` to assemble a privacy-minimized assessment that distinguishes scanner candidates from verified findings.
+
+**Current limits:** this alpha is a scoped **VAPT testing platform**, not a full certified penetration test. No automated authenticated browser/CSRF/multi-step business-logic harness or full-source SAST coverage is claimed yet. The existing [baseline-only workflow](#scan-a-website-or-web-application-web-01) is retained as a fast, lower-impact first stage. ZAP itself must be installed and verified; CI runs synthetic tests only, never active attacks against customer sites.
+
 ## Scan a website or web application (WEB-01)
 
 **New:** a separate URL-based security workflow informed by OWASP WSTG v4.2, ASVS 5.0.0, OWASP Top 10:2025 and OWASP API Security Top 10:2023.
@@ -130,7 +152,7 @@ GitHub-hosted Actions are normally free on public repositories but still have po
 
 - [Universal one-prompt contract](PROMPT.md)
 - [Platform-agnostic checklist](checklists/security-v1.md)
-- [URL website testing prompt](web_prompt.md) and [webapp VAPT checklist](checklists/webapp-vapt-v1.md)
+- [Agentic VAPT prompt](web_prompt.md), [execution guide](docs/vapt-execution.md) and [webapp VAPT checklist](checklists/webapp-vapt-v1.md)
 - [Website testing guidance](docs/webapp-testing.md) and [pilot design learnings](docs/agentic-pilot-learnings.md)
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Scheduled jobs and contribution workflow](docs/operations.md)

@@ -287,6 +287,21 @@ Header presence alone is insufficient for narrow PASS: inspect effective script 
 | WEB-13.09 | Reverify running release/behavior, not just merged Git commit | S | Authorized post-deploy evidence |
 | WEB-13.10 | Preserve `UNKNOWN` where no live access, auth credentials or invasive authorization | B | Deferral matrix |
 
+## Deterministic + agentic execution crosswalk (VAPT alpha)
+
+This checklist now supports an **engagement-scoped VAPT** execution path in addition to the one-request BASELINE. An agent may not silently mark all controls tested just because it launched ZAP.
+
+| Execution stage | Tool / evidence | Likely coverage | Cannot prove |
+|---|---|---|---|
+| Baseline | `web_baseline.py` | WEB-01/02 header and TLS observations | AuthN/AuthZ or injection |
+| DAST passive | ZAP requestor/passive rules under approved RoE | Configuration, known passive indicators | Business logic or full API |
+| DAST active | ZAP `spider` + `activeScan` on isolated synthetic staging | Candidate injection/active weaknesses | False-positive free exploitation; tenant isolation |
+| Role matrix | `vapt_authz.py` with owner-defined synthetic GET fixtures | WEB-03/04/07 status-policy assertions | Body-level object isolation, CSRF and stateful workflows |
+| Agent white box | Authorized source/route/role review | Hypotheses across WEB-03–12 and implementation context | Live runtime correctness without deployed proof |
+| Human retest | Scoped reproducibility evidence | Individual confirmed findings | Entire app safe by default |
+
+**VAPT quality gate:** valid RoE, exact scope, real test execution, meaningful route/role/test coverage, reproducible sanitized evidence, independent review of scanner candidates, prioritized remediation ownership and a deployed retest. Otherwise report `SCOPED_VAPT_PARTIAL` with deferred controls. Active tests in particular must respect synthetic data, approved exclusions, recovery snapshot and network egress limits. See [execution guidance](../docs/vapt-execution.md).
+
 ## Default BASELINE coverage map
 
 A single request to `/` can **only** support a small, explicitly enumerated set: `WEB-00.01` as operator attestation, `WEB-01.01` DNS class, `WEB-01.03` response/redirect, `WEB-02.01` HTTPS certificate validity, `WEB-02.03`–`WEB-02.09` selected header presence, and `WEB-05.01` cookie *flag metadata*. Some checks depend on response availability.
