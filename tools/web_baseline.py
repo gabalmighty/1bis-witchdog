@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 from urllib.parse import urlsplit
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 TIMEOUT = 5
 MAX_COOKIES = 20
 
