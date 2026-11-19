@@ -124,7 +124,18 @@ def one_request(target: dict, ip: str) -> dict:
     finally:
         conn.close()
 
+def parse_directives(policy: str) -> dict[str, list[str]]:
+    """Minimal CSP directive extraction; not a full browser policy evaluator."""
+    found = {}
+    for part in policy.split(";"):
+        tokens = part.strip().lower().split()
+        if tokens and tokens[0] not in found:
+            found[tokens[0]] = tokens[1:]  # browsers use first occurrence
+    return found
+
+
 def check_headers(target: dict, observed: dict) -> list[dict]:
+    """Evaluate narrow observable controls, not exploitation or browser enforcement."""
     headers = observed["headers"]
     lookup = {}
     for key, value in headers:
@@ -136,40 +147,104 @@ def check_headers(target: dict, observed: dict) -> list[dict]:
                          "test_status": "EXECUTED", "evidence_class": "REMOTE_OBSERVED",
                          "evidence": scrub(why, 280)})
 
-    add("WEB-01.03", "PASS", "Single-origin GET returned HTTP " + str(observed["status"]) +
-        "; redirects not followed")
-    add("WEB-02.01", "PASS" if target["scheme"] == "https" else "UNKNOWN",
-        "TLS certificate validation " + observed["tls"]["status"])
-    if target["scheme"] == "https":
-        value = lookup.get("strict-transport-security", [""])[0]
-        match = re.search(r"(?:^|;)\s*max-age\s*=\s*(\d{1,12})", value, re.I)
-        if not match:
-            add("WEB-02.03", "WARN", "HSTS max-age not observed on this single response")
-        elif int(match.group(1)) < 15552000:
-            add("WEB-02.03", "WARN", "HSTS max-age is shorter than a common six-month baseline")
-        else:
-            add("WEB-02.03", "PASS", "HSTS max-age observed and at least six months")
-    else:
-        add("WEB-02.03", "N/A", "HSTS is evaluated on HTTPS, not this explicit HTTP lab request")
-    csp = lookup.get("content-security-policy", [""])[0]
-    if not csp:
-        add("WEB-02.04", "WARN", "Content-Security-Policy absent on this origin response")
-    elif "unsafe-inline" in csp.lower() or "unsafe-eval" in csp.lower():
-        add("WEB-02.04", "WARN", "CSP observed; contains unsafe-inline or unsafe-eval; review context")
-    else:
-        add("WEB-02.04", "PASS", "CSP header observed; full effectiveness NOT tested")
-    add("WEB-02.05", "PASS" if "nosniff" in " ".join(lookup.get("x-content-type-options", [])).lower()
-        else "WARN", "X-Content-Type-Options nosniff present" if lookup.get("x-content-type-options") and
-        "nosniff" in " ".join(lookup["x-content-type-options"]).lower() else "nosniff not observed")
-    if "frame-ancestors" in csp.lower() or lookup.get("x-frame-options"):
-        add("WEB-02.06", "PASS", "A frame-embedding restriction is declared; browser enforcement untested")
-    else:
-        add("WEB-02.06", "WARN", "No frame-ancestors CSP or X-Frame-Options observed")
-    add("WEB-02.07", "PASS" if lookup.get("referrer-policy") else "WARN",
-        "Referrer-Policy observed" if lookup.get("referrer-policy") else "Referrer-Policy absent")
-    add("WEB-02.08", "PASS" if lookup.get("permissions-policy") else "WARN",
-        "Permissions-Policy observed" if lookup.get("permissions-policy") else "Permissions-Policy absent; review applicability")
     status = observed["status"]
+    if 200 <= status < 300:
+        add("WEB-01.03", "PASS", "One authorized origin root GET returned HTTP " +
+            str(status) + "; availability only, not a security clearance")
+    elif status in (401, 403, 429) or status >= 500:
+        add("WEB-01.03", "WARN", "Root returned HTTP " + str(status) +
+            "; app/WAF/proxy response may not represent application security")
+    else:
+        add("WEB-01.03", "WARN", "Root returned HTTP " + str(status) +
+            "; actual app coverage unknown")
+    tls_ok = target["scheme"] == "https" and observed["tls"]["status"] == "VERIFIED"
+    add("WEB-02.01", "PASS" if tls_ok else "UNKNOWN",
+        "Validated TLS handshake" if tls_ok else
+        "HTTPS certificate not assessed by this explicit HTTP lab request")
+
+    if target["scheme"] == "https":
+        hsts = lookup.get("strict-transport-security", [])
+        match = re.search(r"(?:^|;)\s*max-age\s*=\s*(\d{1,12})(?:\s*;|\s*$)", hsts[0], re.I) if hsts else None
+        if len(hsts) > 1:
+            add("WEB-02.03", "WARN", "Multiple HSTS headers; ambiguity requires review")
+        elif not match:
+            add("WEB-02.03", "WARN", "HSTS max-age not observed on root; HTTP upgrade and preload NOT tested")
+        elif int(match.group(1)) == 0:
+            add("WEB-02.03", "WARN", "HSTS max-age=0 disables HSTS")
+        elif int(match.group(1)) < 15552000:
+            add("WEB-02.03", "WARN", "HSTS max-age " + match.group(1) +
+                "s below policy threshold 15552000s; first-visit upgrade UNKNOWN")
+        else:
+            add("WEB-02.03", "PASS", "HSTS max-age at least 15552000s on root; HTTP redirect NOT checked")
+    else:
+        add("WEB-02.03", "N/A", "HSTS is HTTPS response policy; this is explicit HTTP lab mode")
+
+    policies = lookup.get("content-security-policy", [])
+    csp = policies[0] if policies else ""
+    directives = parse_directives(csp)
+    if not csp:
+        note = ("Report-Only CSP observed but not enforced" if lookup.get(
+            "content-security-policy-report-only") else
+            "Enforcing CSP absent on this root response")
+        add("WEB-02.04", "WARN", note)
+    else:
+        script = directives.get("script-src", directives.get("default-src"))
+        script_elements = directives.get("script-src-elem", script)
+        if not script or not script_elements:
+            add("WEB-02.04", "WARN", "CSP present but no script-src/default-src restriction; script execution policy unverified")
+        else:
+            risky = {"'unsafe-inline'", "'unsafe-eval'", "*", "http:", "https:", "data:", "blob:"}
+            expressions = set(script) | set(script_elements)
+            # Broad host and scheme allowlists can warrant further inspection.
+            broad = any(x in risky or x.startswith("http://") or x.startswith("*.") for x in expressions)
+            if broad:
+                add("WEB-02.04", "WARN", "CSP script source has broad or unsafe allowance; review nonce/hash and effective browser policy")
+            else:
+                add("WEB-02.04", "PASS", "Enforcing CSP with script source constraint observed; XSS/browser effectiveness NOT verified")
+
+    nosniff = any(v.strip().lower() == "nosniff"
+                  for v in lookup.get("x-content-type-options", []))
+    add("WEB-02.05", "PASS" if nosniff else "WARN",
+        "Exact X-Content-Type-Options: nosniff observed" if nosniff
+        else "Exact X-Content-Type-Options: nosniff not observed")
+
+    ancestors = directives.get("frame-ancestors")
+    xfo_values = lookup.get("x-frame-options", [])
+    xfo = xfo_values[0].strip().upper() if len(xfo_values) == 1 else ""
+    if ancestors is not None:
+        if not ancestors or "*" in ancestors or "http:" in ancestors:
+            add("WEB-02.06", "WARN", "CSP frame-ancestors present but overly broad/empty")
+        else:
+            add("WEB-02.06", "PASS", "Enforcing CSP frame-ancestors restricts embedding; browser behavior NOT tested")
+    elif xfo in ("DENY", "SAMEORIGIN"):
+        add("WEB-02.06", "PASS", "Valid X-Frame-Options policy observed; browser behavior NOT tested")
+    elif xfo_values:
+        add("WEB-02.06", "WARN", "X-Frame-Options present but invalid/obsolete (e.g. ALLOW-FROM); not accepted as protection")
+    else:
+        add("WEB-02.06", "WARN", "No enforcing CSP frame-ancestors or valid X-Frame-Options observed")
+
+    ref_values = lookup.get("referrer-policy", [])
+    ref = (ref_values[-1].split(",")[-1].strip().lower() if ref_values else "")
+    restrictive_referrers = {"no-referrer", "same-origin", "strict-origin",
+                             "strict-origin-when-cross-origin"}
+    if ref in restrictive_referrers:
+        add("WEB-02.07", "PASS", "Restrictive Referrer-Policy observed: " + ref)
+    elif ref:
+        add("WEB-02.07", "WARN", "Referrer-Policy '" + ref +
+            "' may expose more URL context or be invalid")
+    else:
+        add("WEB-02.07", "WARN", "No explicit Referrer-Policy; modern browsers generally default to strict-origin-when-cross-origin")
+
+    feature_policy = ", ".join(lookup.get("permissions-policy", []))
+    if not feature_policy:
+        add("WEB-02.08", "WARN", "Permissions-Policy absent; optional defense-in-depth based on app feature needs")
+    elif re.search(r"(?:^|,)\s*(?:camera|microphone|geolocation)\s*=\s*\*", feature_policy, re.I):
+        add("WEB-02.08", "WARN", "Powerful browser feature explicitly allowed to all origins; review necessity")
+    elif not re.search(r"[A-Za-z][A-Za-z0-9-]*\s*=\s*(?:\(|\*)", feature_policy):
+        add("WEB-02.08", "WARN", "Permissions-Policy present but no recognizable feature directive")
+    else:
+        add("WEB-02.08", "PASS", "Permissions-Policy directives observed; scope and enforcement NOT tested")
+
     if 300 <= status < 400:
         location = lookup.get("location", [""])[0]
         kind = "NO_LOCATION"
@@ -181,7 +256,7 @@ def check_headers(target: dict, observed: dict) -> list[dict]:
                 kind = "RELATIVE_OR_SAME_ORIGIN_UNFOLLOWED"
         add("WEB-02.09", "WARN", "Redirect observed: " + kind + "; no destination request")
     else:
-        add("WEB-02.09", "PASS", "No redirect on the single inspected response")
+        add("WEB-02.09", "PASS", "No redirect on inspected root response; HTTP->HTTPS separately UNKNOWN")
     cookie_count = 0
     cookie_warnings = 0
     for name, value in headers:
@@ -190,11 +265,8 @@ def check_headers(target: dict, observed: dict) -> list[dict]:
         cookie_count += 1
         tokens = [p.strip().lower() for p in value.split(";")]
         flags = set(t.split("=", 1)[0] for t in tokens[1:])
-        if "samesite" in flags:
-            same_site = next((t.split("=", 1)[1] for t in tokens[1:]
-                             if t.startswith("samesite=")), "")
-        else:
-            same_site = ""
+        same_site = next((t.split("=", 1)[1] for t in tokens[1:]
+                         if t.startswith("samesite=")), "")
         if target["scheme"] == "https" and "secure" not in flags:
             cookie_warnings += 1
         if same_site == "none" and "secure" not in flags:
@@ -207,8 +279,9 @@ def check_headers(target: dict, observed: dict) -> list[dict]:
             str(cookie_count) + " cookie header(s) inspected for flags only; " +
             str(cookie_warnings) + " flag concern(s); cookie names/values NOT stored")
     else:
-        add("WEB-05.01", "N/A", "No Set-Cookie headers on this single response; session flow NOT tested")
+        add("WEB-05.01", "N/A", "No Set-Cookie on this root response; login/session flow UNKNOWN")
     return findings
+
 
 def format_md(report: dict) -> str:
     lines = ["# Witch Dog WEB-01 — authorized baseline", "",
@@ -220,12 +293,17 @@ def format_md(report: dict) -> str:
         "- Requests issued: " + str(report["request_count"]),
         "- Redirects followed: 0",
         "- Result: " + report["state"],
+        "- Assurance: " + report["assurance"] + " (not clearance)",
+        "- High-impact controls untested: " + ", ".join(report["coverage"]["high_impact_unknown"]),
         "- Observation: REMOTE_OBSERVED only; deployed origin/source UNKNOWN",
         "", "| Control | Verdict | Evidence |", "|---|---|---|"]
     for item in report["findings"]:
         lines.append("| " + item["control_id"] + " | " + item["verdict"] +
                      " | " + scrub(item["evidence"], 280) + " |")
-    lines += ["", "## Coverage limitations", ""]
+    lines += ["", "## Unassessed risk", "",
+              "**No application-level severity or VAPT clearance can be inferred from these header observations.**",
+              "Previously reported findings are NOT closed by this run; carry them forward until independent remediation evidence is verified.",
+              "", "## Coverage limitations", ""]
     lines += ["- " + scrub(x, 230) for x in report["limitations"]]
     lines += ["", "No HTML/body, session secrets, login, crawling, APIs, origin image or business-logic testing.",
               "All unexecuted WEB-XX controls are UNKNOWN / NOT_RUN.", ""]
@@ -236,6 +314,11 @@ def perform(target: dict) -> dict:
         "version": VERSION, "timestamp_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "origin": target["origin"], "authorized": True, "mode": "BASELINE",
         "request_count": 0, "network_attempts": 0, "redirects_followed": 0, "state": "UNKNOWN",
+        "assurance": "NOT_A_VAPT",
+        "coverage": {"executed_controls": 0,
+                     "high_impact_unknown": ["authentication", "authorization", "sessions",
+                                             "APIs", "injection", "business_logic",
+                                             "sensitive_data", "deployment"]},
         "evidence_class": "REMOTE_OBSERVED", "findings": [],
         "limitations": [
             "The scanner inspected only root /; all other routes and most checklist controls remain UNKNOWN",
@@ -251,6 +334,7 @@ def perform(target: dict) -> dict:
         record["status_code"] = observed["status"]
         record["tls"] = observed["tls"]
         record["findings"] = check_headers(target, observed)
+        record["coverage"]["executed_controls"] = len(record["findings"])
         record["state"] = "OBSERVED"
         if observed["status"] in (401, 403, 429, 503):
             record["limitations"].append("Response may be auth/rate-limit/WAF/challenge; do not infer application safety")

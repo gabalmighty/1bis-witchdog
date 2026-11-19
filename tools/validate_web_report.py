@@ -51,6 +51,8 @@ def validate_report(path: Path) -> dict:
             raise ValueError("Invalid response status")
     elif obj.get("evidence_class") != "UNKNOWN":
         raise ValueError("Blocked result cannot claim remote observation")
+    if "assurance" in obj and obj["assurance"] != "NOT_A_VAPT":
+        raise ValueError("Baseline cannot claim full assurance")
     rows = obj.get("findings")
     if not isinstance(rows, list) or len(rows) > len(ALLOWED_CONTROLS):
         raise ValueError("Invalid finding count")
@@ -69,6 +71,16 @@ def validate_report(path: Path) -> dict:
         evidence = f.get("evidence")
         if not isinstance(evidence, str) or len(evidence) > 280:
             raise ValueError("Invalid evidence length")
+    if "coverage" in obj:
+        coverage = obj["coverage"]
+        if (not isinstance(coverage, dict) or
+                type(coverage.get("executed_controls")) is not int or
+                coverage["executed_controls"] != len(rows)):
+            raise ValueError("Inaccurate execution coverage")
+        unknown = coverage.get("high_impact_unknown")
+        if not isinstance(unknown, list) or len(unknown) < 6 or any(
+                not isinstance(x, str) or len(x) > 70 for x in unknown):
+            raise ValueError("High-impact untested domains missing")
     limits = obj.get("limitations")
     if not isinstance(limits, list) or not limits or len(limits) > 25:
         raise ValueError("Missing limitation matrix")

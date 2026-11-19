@@ -2,6 +2,18 @@
 
 **Witch Dog WEB-01, experimental.** A lightweight black-box baseline is an appropriate starting point for owned websites, not a complete VAPT or audit attestation.
 
+## Pilot-tested interpretation guardrails
+
+A fast baseline can be useful, but **one homepage GET is not a VAPT**. The number of controls returned is not application coverage. Even when a website has all six headline security headers, authentication/tenant isolation, API safety, payroll exports and sensitive data are not assessed. The report explicitly states `NOT_A_VAPT` and lists high-impact domains as `UNKNOWN`.
+
+- Security headers should be **semantically checked**, not marked PASS merely because they exist. A CSP containing only `img-src` does not constrain scripts; `X-Frame-Options: ALLOW-FROM` is obsolete; `Referrer-Policy: unsafe-url` is weaker than the modern browser default; `Permissions-Policy: camera=*` may be overly broad; and `notnosniff` is not `nosniff`.
+- A missing `Referrer-Policy` does not prove sensitive URLs leaked: modern browsers default to `strict-origin-when-cross-origin`. Missing `Permissions-Policy` is generally a lower-priority hardening consideration than access-control and data-exposure defects.
+- A TLSv1.3 **successful handshake** proves that one connection was supported and validated, not that TLSv1.0/1.1 are disabled.
+- HSTS affects later HTTPS connections, not first contact unless the hostname is preloaded. Lack of HSTS is not proof an HTTP plaintext endpoint exists.
+- Security headers on the SPA root may differ from those on an API, proxy or CDN edge. When a prior source audit reported protections but the root does not return them, record a **deployment-layer conflict** until authorized operator evidence resolves it.
+- A previous Critical finding is not closed by a later header baseline; carry unresolved findings in the private client register until retested.
+- Scanner elapsed time mostly reflects agent/provider overhead. Use control coverage, accuracy, confidence, safe evidence and reproducibility to evaluate quality.
+
 ## What the URL scanner actually does
 
 - Requires `--target` and `--authorized`; validates the URL and tests a single origin.

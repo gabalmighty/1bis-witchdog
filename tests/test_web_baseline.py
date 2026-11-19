@@ -126,5 +126,68 @@ class EvidenceTests(unittest.TestCase):
             thread.join(timeout=3)
 
 
+
+class SecurityPolicyValueTests(unittest.TestCase):
+    """Prevent false PASS for headers with permissive or obsolete values."""
+
+    def evaluate(self, headers, status=200):
+        target = web.parse_target("https://example.com")
+        observed = {"status": status,
+                    "tls": {"status": "VERIFIED", "version": "TLSv1.3"},
+                    "headers": headers, "redirects_followed": 0}
+        return {row["control_id"]: row for row in web.check_headers(target, observed)}
+
+    def test_csp_present_but_scripts_unrestricted_is_warn(self):
+        for policy in ("img-src 'self'; object-src 'none'",
+                       "default-src *", "script-src 'unsafe-inline'",
+                       "default-src 'self'; script-src https:",
+                       "script-src data:"):
+            with self.subTest(policy=policy):
+                result = self.evaluate([("content-security-policy", policy)])
+                self.assertEqual(result["WEB-02.04"]["verdict"], "WARN")
+        result = self.evaluate([("content-security-policy-report-only", "script-src 'self'")])
+        self.assertEqual(result["WEB-02.04"]["verdict"], "WARN")
+
+    def test_csp_script_restriction_pass_is_narrow(self):
+        result = self.evaluate([("content-security-policy",
+                                 "default-src 'self'; script-src 'self'; frame-ancestors 'none'")])
+        self.assertEqual(result["WEB-02.04"]["verdict"], "PASS")
+        self.assertIn("NOT verified", result["WEB-02.04"]["evidence"].lower().replace("not verified", "NOT verified"))
+        self.assertEqual(result["WEB-02.06"]["verdict"], "PASS")
+
+    def test_xframe_options_obsolete_not_passed(self):
+        bad = self.evaluate([("x-frame-options", "ALLOW-FROM https://example.com")])
+        self.assertEqual(bad["WEB-02.06"]["verdict"], "WARN")
+        weak = self.evaluate([("content-security-policy",
+                                "script-src 'self'; frame-ancestors *")])
+        self.assertEqual(weak["WEB-02.06"]["verdict"], "WARN")
+        good = self.evaluate([("x-frame-options", "DENY")])
+        self.assertEqual(good["WEB-02.06"]["verdict"], "PASS")
+
+    def test_mime_referrer_permissions_must_mean_something(self):
+        weak = self.evaluate([
+            ("x-content-type-options", "notnosniff"),
+            ("referrer-policy", "unsafe-url"),
+            ("permissions-policy", "camera=*, microphone=*")])
+        for control in ("WEB-02.05", "WEB-02.07", "WEB-02.08"):
+            self.assertEqual(weak[control]["verdict"], "WARN")
+        strong = self.evaluate([
+            ("x-content-type-options", "nosniff"),
+            ("referrer-policy", "no-referrer"),
+            ("permissions-policy", "camera=(), microphone=()")])
+        for control in ("WEB-02.05", "WEB-02.07", "WEB-02.08"):
+            self.assertEqual(strong[control]["verdict"], "PASS")
+
+    def test_http_auth_or_challenge_is_not_security_pass(self):
+        for status in (401, 403, 429, 503):
+            with self.subTest(status=status):
+                result = self.evaluate([], status=status)
+                self.assertEqual(result["WEB-01.03"]["verdict"], "WARN")
+
+    def test_hsts_zero_is_warn_not_pass(self):
+        result = self.evaluate([("strict-transport-security", "max-age=0")])
+        self.assertEqual(result["WEB-02.03"]["verdict"], "WARN")
+
+
 if __name__ == "__main__":
     unittest.main()

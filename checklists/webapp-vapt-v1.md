@@ -30,6 +30,12 @@ Witch Dog's initial `tools/web_baseline.py` executes **only the small B-tier sub
 
 For every control, track `test_status=EXECUTED/DEFERRED/BLOCKED/NOT_APPLICABLE`, `verdict=PASS/FAIL/WARN/UNKNOWN/N/A`, the observation class `REMOTE_OBSERVED/SOURCE_DECLARED/HOST_OBSERVED/LIVE_VERIFIED/UNKNOWN/CONFLICTING`, method, redacted evidence, UTC date, source version, confidence, risk, limitations and a retest requirement.
 
+### Baseline result interpretation and risk carry-forward
+
+The BASELINE runs a single authorized GET of `/`, usually covering around ten header/TLS controls, not a meaningful sample of the full VAPT catalog. Good scores or zero High findings reflect **limited tests**, not secure authentication or authorization. Reports MUST label `NOT_A_VAPT`, retain high-impact `UNKNOWN` controls and preserve unresolved independent audit findings in the **private** client register. A 200 landing page is availability evidence, not a secure application conclusion. Compare source vs CDN/SPA/API and running release before reconciling contradictory header evidence. Do not claim TLS minimum supported version from a single TLSv1.3 negotiation.
+
+Header presence alone is insufficient for narrow PASS: inspect effective script restriction under CSP, valid `frame-ancestors` or X-Frame-Options, exact `nosniff`, actual Referrer-Policy directive and sensitive Permissions-Policy grants. The absence of Referrer-Policy is not necessarily an active leak because of modern browser defaults; missing Permissions-Policy is a context-dependent hardening observation. See [pilot lessons](../docs/web-baseline-pilot-lessons.md).
+
 ## WEB-00 — Engagement scope and safe execution
 
 *Crosswalk: NIST SP 800-115 planning and OWASP WSTG testing framework.*
