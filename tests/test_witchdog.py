@@ -4,6 +4,8 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import urllib.error
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,6 +70,23 @@ class ScannerTests(unittest.TestCase):
         self.assertEqual(intel.parse_kev(KEV)[0]["cve"], "CVE-2026-12345")
         with self.assertRaises(ValueError):
             intel.parse_zero_wire(b"<!DOCTYPE a><rss/>")
+    def test_agent_allowlist_only_contains_exact_local_scan_commands(self):
+        config = json.loads((ROOT / "opencode.jsonc").read_text(encoding="utf-8"))
+        self.assertEqual(config["default_agent"], "witchdog")
+        rules = config["agents"]["witchdog"]["permissions"]
+        self.assertIn({"action": "shell", "resource": "*", "effect": "ask"}, rules)
+        scanner_rules = [x for x in rules if x["action"] == "shell"
+                         and "tools/witchdog.py scan" in x["resource"]]
+        self.assertEqual(len(scanner_rules), 3)
+        self.assertTrue(all(x["effect"] == "allow" for x in scanner_rules))
+        self.assertIn({"action": "read", "resource": "*.env*", "effect": "deny"}, rules)
+    def test_cisa_mirror_fallback(self):
+        http_error = urllib.error.HTTPError(intel.CISA_KEV, 403, "Access denied", None, None)
+        with mock.patch.object(intel, "fetch", side_effect=[http_error, KEV]) as fetch_mock:
+            self.assertEqual(intel.fetch_kev(), KEV)
+            self.assertEqual(fetch_mock.call_args_list, [
+                mock.call(intel.CISA_KEV), mock.call(intel.CISA_KEV_MIRROR)
+            ])
     def test_feed_validation(self):
         obj = intel.build(RSS, KEV)
         with tempfile.TemporaryDirectory() as tmp:

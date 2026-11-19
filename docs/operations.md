@@ -7,7 +7,7 @@ Clone alongside target repos, then run the universal prompt in the README. To av
 - Linux/macOS: `python3 tools/witchdog.py scan --root .. --output .witchdog/runs`
 - Windows PowerShell: `py -3 tools/witchdog.py scan --root .. --output .witchdog/runs`
 
-Explicitly pass `--root`; output is local, normally `.witchdog/runs/`. No repo editing or remote scanning occurs in the Python scanner. Protect output and avoid publishing it in a public issue/PR.
+Explicitly pass `--root`; output is local, normally `.witchdog/runs/`. The OpenCode Witch Dog agent allows only these three exact baseline shell commands without a separate approval; other shell operations still require approval. This is an agent UX setting, NOT an operating-system security boundary. No repo editing or remote scanning occurs in the Python scanner. Protect output and avoid publishing it in a public issue/PR.
 
 ## Scheduling
 
@@ -30,3 +30,7 @@ Never combine untrusted PR checkout, a powerful GitHub write token and an agent 
 4. Unavailable RSS or malformed KEV input: workflow fails and preserves last known-good data.
 5. Public PR review: inspect that no private path, hostname, .env value or customer address appears.
 6. Simulated advisories for Vite and NGINX: verify source-only vs live verdict separation.
+
+## Public CISA KEV feed resilience
+
+If the official cisa.gov JSON endpoint returns HTTP 403 or another transport error, the collector retries using [CISA's official `cisagov/kev-data` mirror](https://github.com/cisagov/kev-data) (develop branch). Both URLs are exact-allowlisted. An invalid JSON/schema fails the run; no arbitrary redirect or third-party proxy is trusted. The system does not update the maintained intelligence snapshot on a failed run.
