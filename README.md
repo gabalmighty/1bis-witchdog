@@ -67,6 +67,12 @@ python3 tools/web_baseline.py --target https://YOUR-STAGING-APP.example --author
 
 Windows PowerShell: replace `python3` with `py -3`. `--authorized` affirms permission to inspect that **exact** origin. The baseline makes **one** GET request to `/`, verifies TLS, observes selected headers and cookie flags, and does not follow redirects, crawl, authenticate, fuzz or exploit. Most VAPT controls remain `UNKNOWN` until separately authorized UAT/manual work. Reports remain private in `.witchdog/web-runs/`; `manifest.json` contains SHA-256 evidence identifiers (not signatures). Run `python3 tools/validate_web_report.py --report .witchdog/web-runs/report.json` to enforce the baseline report contract. See [website testing guidance](docs/webapp-testing.md).
 
+### Interpreting your first website report
+
+Witch Dog's fast root-only baseline is intentionally a low-impact **configuration observation**, not penetration testing. Its report identifies high-impact authentication, authorization, API and data controls as **UNKNOWN**, and labels overall assurance `NOT_A_VAPT`. Header-value checks are conservative: a policy that exists but is weak may still be a WARN. Historical Critical findings from prior audits must be retested separately, not silently closed by a baseline.
+
+See [pilot interpretation and verification lessons](docs/web-baseline-pilot-lessons.md) for quality gates and future test priorities.
+
 ## How it works
 
 ```text

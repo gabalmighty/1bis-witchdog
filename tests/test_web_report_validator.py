@@ -51,6 +51,23 @@ class ReportContractTests(unittest.TestCase):
             f.write_text(json.dumps(obj), encoding="utf-8")
             with self.assertRaises(ValueError):
                 validator.validate_report(f)
+    def test_unearned_assurance_and_fabricated_coverage_are_rejected(self):
+        obj = self.sample()
+        self.assertEqual(obj["assurance"], "NOT_A_VAPT")
+        self.assertGreaterEqual(len(obj["coverage"]["high_impact_unknown"]), 6)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "sample.json"
+            for patch in (
+                    {"assurance": "ASVS_L1_PASSED"},
+                    {"coverage": {"executed_controls": 999, "high_impact_unknown": []}},
+                    {"coverage": {"executed_controls": len(obj["findings"]),
+                                  "high_impact_unknown": []}}):
+                candidate = dict(obj)
+                candidate.update(patch)
+                path.write_text(json.dumps(candidate), encoding="utf-8")
+                with self.subTest(patch=patch), self.assertRaises(ValueError):
+                    validator.validate_report(path)
+
     def test_report_manifest_hashes_match_file(self):
         report = self.sample()
         with tempfile.TemporaryDirectory() as temp:
