@@ -30,6 +30,16 @@
 | B06 | Reevaluate on changed advisory/KEV/EPSS/deployment | Event and prior state |
 | B07 | Retest **running** patched binary/image after rollout | Live digest, version and feature flags |
 
+### Additional controls from the November 2026 read-only agentic pilot
+
+| ID | Check | Required verification |
+|---|---|---|
+| A08 | Distinguish declared, resolved, installed and **running** software instance identity | Graph, file, host and live digest separately |
+| A09 | Reconcile Compose/K3s/CDN/Argo CD/CI topology and flag contradictions | Authorized deployment path; mark `CONFLICTING` |
+| B08 | Inspect **each** direct/transitive resolved instance, including test runners | Per-instance dependency chain, role and affected range |
+| B09 | Differentiate upstream NGINX, NGINX Ingress, distro/vendor builds and image tags | Product ID and actual binary provenance |
+| B10 | Evaluate version, module, protocol, feature flags, listener and reachability as separate vulnerability predicates | Evidence matrix for each prerequisite |
+
 ## C. Host and persistence
 
 | ID | Check | Required verification |
@@ -96,6 +106,13 @@
 | G06 | Admin consoles/metrics/DB publicly exposed? | Network and auth review |
 | G07 | Running bundle/service/config match trusted release | Build/digest evidence |
 
+### Effective exposure (not merely source declarations)
+
+| ID | Check | Required verification |
+|---|---|---|
+| G08 | Host-published database, metrics, admin and debug ports effectively restricted | Live bind/firewall/reachability, not Compose `ports:` alone |
+| G09 | Verify placeholder/default passwords are **not active** | Secure config/rotation attestation; never print secrets |
+
 ## H. Incident response and gate integrity
 
 | ID | Check | Required verification |
@@ -110,6 +127,17 @@
 | H08 | Inject malicious fake advisories and malformed data into tests | Negative security tests |
 | H09 | Store model, prompt/tool versions and evidence checksums | Audit manifest |
 | H10 | Monitor collector uptime, config drift and lost telemetry | Heartbeat |
+
+### Agentic triage and evidence integrity
+
+| ID | Check | Required verification |
+|---|---|---|
+| H11 | Hash sanitized advisory/assets/checklist and pin worker prompt/tool version | SHA-256 manifest plus scope |
+| H12 | Deterministically validate AI findings and adversarially test malicious feed/HTML input | Schema gate + negative fixtures |
+| H13 | Keep runtime verification separate from merged source PRs and remote edge observations | Evidence classes; contradictory inputs marked `CONFLICTING` |
+| H14 | Clearly report missing KEV/EPSS enrichment, runtime access and regression coverage | Coverage matrix, not silent PASS |
+
+Owned website/webapp assessments also follow [the web application VAPT checklist](webapp-vapt-v1.md) and [the generalized pilot lessons](../docs/agentic-pilot-learnings.md). Its baseline collector does **not** execute the complete catalog.
 
 **Prioritization:** P0 observed compromise or directly exposed urgent exploitable weakness; P1 urgent credible reachable risk; P2 constrained verified exposure; P3 hygiene; UNKNOWN missing evidence. CVSS, KEV and EPSS have distinct meanings.
 
