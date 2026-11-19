@@ -53,17 +53,19 @@ def repo_fixture(temp):
 class ReviewTests(unittest.TestCase):
     def test_diff_rules_and_secret_redaction(self):
         diff = ("diff --git a/.env b/.env\n"
-                "@@ -0,0 +1,2 @@\n"
+                "@@ -0,0 +1,3 @@\n"
                 "+API_KEY='NOT_A_REAL_TEST_SECRET_0123456789'\n"
-                "+server.host: true\n")
+                "+server.host: true\n"
+                "+ACCOUNT_NOT_SECRET=john.doe@example.invalid\n")
         findings, packet, coverage = review.inspect_diff(diff, limit=30000)
         names = {f["control"] for f in findings}
         self.assertIn("SECRET-CANDIDATE", names)
         self.assertIn("TRACKED-SENSITIVE-FILE", names)
         self.assertIn("DEV-BIND", names)
         self.assertNotIn("NOT_A_REAL_TEST_SECRET_0123456789", packet)
+        self.assertNotIn("john.doe@example.invalid", packet)
         self.assertTrue(all(f["path"] == ".env" for f in findings))
-        self.assertEqual(coverage["added_lines_inspected"], 2)
+        self.assertEqual(coverage["added_lines_inspected"], 3)
 
     @unittest.skipUnless(shutil.which("git"), "Git executable required")
     def test_full_offline_review_and_stale_head(self):

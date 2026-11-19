@@ -147,10 +147,16 @@ def inspect_diff(raw: str, *, limit: int) -> tuple[list[dict], str, dict]:
                         "evidence_class": "SOURCE_DECLARED"
                     })
             count += 1
-            packet_lines.append("+" + redact(value))
+            if RE_HIGH_RISK_NAME.search(file_name):
+                packet_lines.append("+[REDACTED SENSITIVE FILE CONTENT]")
+            else:
+                packet_lines.append("+" + redact(value))
             line_no += 1
         elif line.startswith("-") and not line.startswith("---"):
-            packet_lines.append("-" + redact(line[1:]))
+            if file_name and RE_HIGH_RISK_NAME.search(file_name):
+                packet_lines.append("-[REDACTED SENSITIVE FILE CONTENT]")
+            else:
+                packet_lines.append("-" + redact(line[1:]))
         elif line.startswith(" ") or line.startswith("\\"):
             packet_lines.append(" " + redact(line[1:]))
             if line.startswith(" "):
