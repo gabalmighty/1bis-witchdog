@@ -284,7 +284,8 @@ def write_private(path: Path, name: str, text: str) -> None:
     dest = path / name
     if dest.is_symlink():
         raise ValueError("Refusing to write via symlink")
-    dest.write_text(text, encoding="utf-8")
+    # Binary UTF-8 write keeps LF bytes identical across Windows and Linux.
+    dest.write_bytes(text.encode("utf-8"))
     if os.name == "posix":
         os.chmod(dest, 0o600)
 
