@@ -17,6 +17,32 @@ Witch Dog is an **open-source, model-agnostic security investigation kit** combi
 
 > **Project status:** experimental v0.1 bootstrap. The inspector is a conservative source/host **discovery tool**, not an EDR, penetration test, exhaustive malware scanner, or proof that production is safe. Never give an AI agent root, production secrets, or unattended production-change authority.
 
+## Agentic Pull Request Security Reviews
+
+**New (pilot):** one Witch Dog reviewer, two CI adapters. Automatically review PR changes using deterministic security checks and, when approved, an isolated read-only OpenCode model. Use it with **GitHub Actions** or an existing **Windows/Linux/NUC VM CI job**. Both read the same versioned checklists and produce an evidence-based Markdown/JSON review. This does not replace your app tests, VAPT or deployment checks.
+
+**Agentic one-prompt installation (run inside a target repository):**
+
+> Follow the adoption instructions at https://github.com/gabalmighty/1bis-witchdog/blob/main/review_setup_prompt.md. Discover our repository, OS and existing CI; set up the GitHub Action, local VM runner, or both. Pin Witch Dog executable code to a reviewed SHA, use latest checklist data, keep secrets out of Git and OpenCode tool access read-only, add tests and open a target-repository PR for my review.
+
+For GitHub-hosted review, copy [the sample workflow](examples/witchdog-github-review.yml). Its core is one Action reference:
+
+```yaml
+steps:
+  - uses: gabalmighty/1bis-witchdog@main # Pilot only; PIN a reviewed full SHA before production use
+    with:
+      enable-ai: 'true'
+      approve-code-sharing: 'true'
+      model: opencode-go/hy4-flash-free # Verify current free catalog / provider terms
+      provider: opencode-go
+```
+
+For VM/local CI, use [Linux](examples/witchdog-local.sh) or [Windows PowerShell](examples/witchdog-local.ps1) with the exact PR base/head SHA. The portable CLI is `tools/pr_review.py`; the model is optional. Use a dedicated unprivileged reviewer account and a temporary checkout with no build/install hooks. **The reviewer never sends a GitHub write token to the model.** Optional GitHub comment publishing is a separately credentialed stage.
+
+For private client code, deterministic-only review is the safe default until you approve the selected provider's data-handling terms or use an isolated local model. Available free models and quotas change; a free model is not automatically private.
+
+[Complete adoption, security and CI instructions](docs/pr-review.md) · [Security PR checklist](checklists/pr-review-v1.md) · [Agent installer prompt](review_setup_prompt.md)
+
 ## Quick start
 
 Clone Witch Dog alongside the projects you want to inspect:
@@ -150,6 +176,8 @@ GitHub-hosted Actions are normally free on public repositories but still have po
 
 ## Security checklist and guidance
 
+- [Agentic PR reviewer setup](review_setup_prompt.md) and [two-backend guide](docs/pr-review.md)
+- [PR/CI security review checklist](checklists/pr-review-v1.md)
 - [Universal one-prompt contract](PROMPT.md)
 - [Platform-agnostic checklist](checklists/security-v1.md)
 - [Agentic VAPT prompt](web_prompt.md), [execution guide](docs/vapt-execution.md) and [webapp VAPT checklist](checklists/webapp-vapt-v1.md)

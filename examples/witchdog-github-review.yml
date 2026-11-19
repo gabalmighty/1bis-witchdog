@@ -1,0 +1,33 @@
+name: Witch Dog PR Security Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: witchdog-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # Fork PRs must use separate secretless review or human review.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Witch Dog security reviewer
+        uses: gabalmighty/1bis-witchdog@main # PILOT ONLY: replace main with reviewed full commit SHA
+        with:
+          enable-ai: 'false' # enable after provider privacy approval
+          approve-code-sharing: 'false' # set true only with client/public code approval
+          model: opencode-go/hy4-flash-free # check free-model availability
+          provider: auto
+          provider-key: ${{ secrets.WITCHDOG_PROVIDER_KEY }} # optional for free models
+          github-token: ${{ github.token }}
+          policy-ref: main # latest checklist DATA only
+          diff-budget: '30000'
+          publish-comment: 'true'

@@ -1,0 +1,127 @@
+name: Witch Dog Agentic PR Security Review
+description: Portable deterministic and optional OpenCode PR security review
+author: Witch Dog contributors
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  model:
+    description: OpenCode provider/model ID (check current free catalog)
+    default: opencode-go/hy4-flash-free
+  provider:
+    description: auto or configured OpenCode provider for key mapping
+    default: auto
+  enable-ai:
+    description: Opt in to sending sanitized review context to a model
+    default: 'false'
+  approve-code-sharing:
+    description: Explicitly approve code transfer under the provider's data policy
+    default: 'false'
+  provider-key:
+    description: Optional provider API key, pass from Actions secrets
+    default: ''
+  github-token:
+    description: Repo-scoped token for comment publication only
+    default: ${{ github.token }}
+  publish-comment:
+    description: Update bot review comment, same-repo PRs only
+    default: 'true'
+  policy-ref:
+    description: Reviewed Witch Dog policy commit SHA or main, data only
+    default: main
+  diff-budget:
+    description: Max sanitized diff characters sent to the model
+    default: '30000'
+
+runs:
+  using: composite
+  steps:
+    - name: Require same-repository pull_request
+      shell: bash
+      env:
+        WD_EVENT: ${{ github.event_name }}
+        WD_REPO: ${{ github.repository }}
+        WD_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+      run: |
+        if [ "$WD_EVENT" != "pull_request" ] || [ "$WD_REPO" != "$WD_HEAD_REPO" ]; then
+          echo "::error::Witch Dog requires same-repo pull_request; external forks are not processed with secrets."
+          exit 2
+        fi
+
+    - name: Checkout PR source as non-executable data
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Set up Python
+      uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+      with:
+        python-version: '3.11'
+
+    - name: Retrieve latest reviewed checklist data
+      shell: bash
+      env:
+        WD_POLICY_REF: ${{ inputs.policy-ref }}
+      run: |
+        python "$GITHUB_ACTION_PATH/tools/pr_policy.py" --out "$RUNNER_TEMP/witchdog-policy" \
+          --bundled "$GITHUB_ACTION_PATH" --ref "$WD_POLICY_REF" || true
+
+    - name: Deterministic PR security checks
+      shell: bash
+      env:
+        WD_BASE: ${{ github.event.pull_request.base.sha }}
+        WD_HEAD: ${{ github.event.pull_request.head.sha }}
+        WD_BUDGET: ${{ inputs.diff-budget }}
+      run: |
+        python "$GITHUB_ACTION_PATH/tools/pr_review.py" inspect \
+          --repo "$GITHUB_WORKSPACE" --base "$WD_BASE" --head "$WD_HEAD" \
+          --out "$RUNNER_TEMP/witchdog-pr-review" \
+          --kit "$RUNNER_TEMP/witchdog-policy" --diff-budget "$WD_BUDGET"
+
+    - name: Set up Node for optional model
+      if: ${{ inputs.enable-ai == 'true' && inputs.approve-code-sharing == 'true' }}
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+      with:
+        node-version: '22'
+
+    - name: Install pinned OpenCode v2
+      if: ${{ inputs.enable-ai == 'true' && inputs.approve-code-sharing == 'true' }}
+      shell: bash
+      run: npm install --global @opencode/cli@2.3.2
+
+    - name: Isolated read-only OpenCode analysis
+      if: ${{ inputs.enable-ai == 'true' && inputs.approve-code-sharing == 'true' }}
+      shell: bash
+      continue-on-error: true
+      env:
+        WITCHDOG_PROVIDER_KEY: ${{ inputs.provider-key }}
+        WD_MODEL: ${{ inputs.model }}
+        WD_PROVIDER: ${{ inputs.provider }}
+      run: |
+        python "$GITHUB_ACTION_PATH/tools/pr_review.py" ai \
+          --out "$RUNNER_TEMP/witchdog-pr-review" \
+          --model "$WD_MODEL" --provider "$WD_PROVIDER" --allow-code-to-model
+
+    - name: Validate report contract
+      shell: bash
+      run: python "$GITHUB_ACTION_PATH/tools/pr_review.py" validate --out "$RUNNER_TEMP/witchdog-pr-review"
+
+    - name: Post or update one bot-owned PR comment
+      if: ${{ inputs.publish-comment == 'true' }}
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        WD_REPOSITORY: ${{ github.repository }}
+        WD_PR: ${{ github.event.pull_request.number }}
+        WD_HEAD: ${{ github.event.pull_request.head.sha }}
+      run: |
+        python "$GITHUB_ACTION_PATH/tools/pr_publish.py" \
+          --repo "$WD_REPOSITORY" --pr "$WD_PR" --head "$WD_HEAD" \
+          --out "$RUNNER_TEMP/witchdog-pr-review"
+
+    - name: Summary
+      shell: bash
+      run: echo "Witch Dog security review generated; consult PR review comment or local report." >> "$GITHUB_STEP_SUMMARY"
