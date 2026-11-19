@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "sources": [
+    "https://radar.cloudflare.com/security/zero-wire/rss",
+    "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+  ],
+  "advisories": [],
+  "note": "Not fetched yet; scheduled workflow will open first intelligence update PR after activation."
+}
