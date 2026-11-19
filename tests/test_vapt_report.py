@@ -75,6 +75,8 @@ class ReportTests(unittest.TestCase):
             (out / "authz-status-matrix.json").write_text(json.dumps(auth))
             result = reporter.produce(scope, out)
             text = (out / "vapt-assessment.md").read_text()
+            self.assertEqual(result["stages"]["zap"], "EXTERNAL_UNVERIFIED")
+            self.assertEqual(result["zap_execution_attribution"], "EXTERNAL_UNVERIFIED")
             self.assertEqual(result["dynamic_scanner_candidates"], 1)
             self.assertEqual(result["synthetic_authz_unexpected_statuses"], 1)
             self.assertIn("Potential Cross Site Scripting", text)
@@ -82,6 +84,36 @@ class ReportTests(unittest.TestCase):
             self.assertNotIn("PRIVATE_SESSION_DO_NOT_LEAK", text)
             self.assertEqual(result["findings"][0]["status"],
                              "CANDIDATE_NEEDS_INDEPENDENT_VALIDATION")
+    def test_runner_recorded_warning_is_not_a_clean_vapt_pass(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            scope_file = folder / 'scope.json'
+            scope_file.write_text(json.dumps(sample_scope()))
+            out = folder / 'out'
+            manifest = vapt.create_plan(scope_file, out)
+            raw = {'site': [{'@name': 'https://vapt-staging.example.invalid',
+                             'alerts': []}]}
+            report_file = out / 'zap-raw-private.json'
+            report_file.write_text(json.dumps(raw), encoding='utf-8')
+            manifest['execution_state'] = 'COMPLETE_WITH_WARNINGS'
+            manifest['execution_path'] = 'WITCHDOG_RUNNER'
+            manifest['exit_code'] = 2
+            manifest['precheck_exit_code'] = 0
+            vapt.write_private(out, 'manifest.json', json.dumps(manifest) + '\n')
+            receipt = {
+                'schema_version': 1, 'execution_path': 'WITCHDOG_RUNNER',
+                'engagement_id': manifest['engagement_id'],
+                'scope_sha256': manifest['scope_sha256'],
+                'plan_sha256': manifest['plan_sha256'],
+                'report_sha256': vapt.sha256(report_file.read_bytes()),
+                'precheck_exit_code': 0, 'autorun_exit_code': 2,
+            }
+            vapt.write_private(out, 'runner-receipt.json', json.dumps(receipt))
+            normalized = vapt.normalize_zap(scope_file, out)
+            self.assertEqual(normalized['execution_attribution'], 'RUNNER_RECORDED')
+            result = reporter.produce(scope_file, out)
+            self.assertEqual(result['stages']['zap'], 'EXECUTED_WITH_WARNINGS')
+            self.assertEqual(result['assurance'], 'SCOPED_VAPT_PARTIAL')
     def test_wrong_baseline_origin_is_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "scope.json"

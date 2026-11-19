@@ -17,7 +17,8 @@ import urllib.error
 from pathlib import Path
 
 OWNER_REPO = "gabalmighty/1bis-witchdog"
-ALLOWED_PATHS = ("checklists/security-v1.md", "checklists/pr-review-v1.md")
+ALLOWED_PATHS = ("checklists/security-v1.md", "checklists/pr-review-v1.md",
+                 "checklists/identity-authorization-v1.md")
 RE_SHA = re.compile(r"^[0-9a-f]{40}$")
 MAX_BYTES = 100000
 

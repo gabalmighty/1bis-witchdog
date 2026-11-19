@@ -75,6 +75,12 @@ For a **deterministic scan without AI**, run this first (recommended for schedul
 
 The output stays local in `.witchdog/runs/` (gitignored). Open `report.md` and `scan.json` there. **Do not upload customer evidence or private scan results to this public repository.**
 
+## Security audit and VAPT evidence improvements (2026-11-20)
+
+A new [cross-service identity and authorization checklist](checklists/identity-authorization-v1.md) covers JWT issuer/key trust, alternate backend endpoints, role/tenant authorization, NoSQL filters, uploads and destructive operations. See [generalized audit/VAPT lessons](docs/security-lessons-20261120.md). These controls apply to host/source review, URL-based VAPT with authorized source access, and the PR reviewer.
+
+The ZAP plan generator was hardened after a pilot: incompatible optional Environment configuration is no longer emitted; `-autocheck` failure is a HOLD, not an agent shortcut. `-autorun` exit 2 after a clean precheck can be `COMPLETE_WITH_WARNINGS` when a bounded raw report and runner receipt match. External manual runs remain `EXTERNAL_UNVERIFIED` and cannot be upgraded by hand-editing the manifest. Active tests still require isolated synthetic staging.
+
 ## Agentic web application VAPT (experimental)
 
 Witch Dog now goes beyond the **one-request baseline**: for an authorized **synthetic staging/lab** deployment, it can combine OWASP ZAP passive scanning, bounded **active injection testing**, safe multi-role authorization assertions, code/dependency review and AI-guided follow-up. It uses the existing web checklist, but runs the tests through a **private rules-of-engagement file** with explicit approval and network/impact gates.

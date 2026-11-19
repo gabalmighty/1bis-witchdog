@@ -67,6 +67,21 @@ class ReviewTests(unittest.TestCase):
         self.assertTrue(all(f["path"] == ".env" for f in findings))
         self.assertEqual(coverage["added_lines_inspected"], 3)
 
+    def test_cross_service_authz_source_patterns_are_candidates_only(self):
+        source = ("diff --git a/api/auth.ts b/api/auth.ts\n"
+                  "@@ -0,0 +1,4 @@\n"
+                  "+const key = process.env.JWT_SECRET || 'fake-for-tests';\n"
+                  "+collection.find(req.body);\n"
+                  "+callback.searchParams.set('access_token', code);\n"
+                  "+const allowed = origin.startsWith(requestOrigin);\n")
+        findings, packet, coverage = review.inspect_diff(source, limit=30000)
+        controls = {x['control'] for x in findings}
+        for expected in ('AUTH-JWT-FALLBACK', 'NOSQL-RAW-FILTER',
+                         'URL-SESSION-TOKEN', 'CORS-ORIGIN-PREFIX'):
+            self.assertIn(expected, controls)
+        self.assertTrue(all(x['confidence'] == 'RULE_MATCH_NOT_EXPLOIT_PROOF'
+                            for x in findings if x['control'] in controls))
+        self.assertEqual(coverage['added_lines_inspected'], 4)
     @unittest.skipUnless(shutil.which("git"), "Git executable required")
     def test_full_offline_review_and_stale_head(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -135,6 +150,8 @@ class ReviewTests(unittest.TestCase):
             self.assertEqual(result["source"], "PINNED_BUNDLED_FALLBACK")
             self.assertTrue((Path(temp) / "policies" / "checklists" /
                              "pr-review-v1.md").is_file())
+            self.assertTrue((Path(temp) / "policies" / "checklists" /
+                             "identity-authorization-v1.md").is_file())
 
     def test_publisher_updates_bot_only(self):
         comments = [

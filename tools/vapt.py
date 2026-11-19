@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 from urllib.parse import urlsplit, unquote
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 MAX_SCOPE = 131072
 MAX_ZAP_REPORT = 20_000_000
 ALLOWED_MODES = ("passive", "active")
@@ -221,7 +221,8 @@ def plan_yaml(scope: dict) -> str:
             lines.append("        - " + yamlq(anchored_regex(scope["target"], p)))
     lines += ["  parameters:", "    failOnError: true",
               "    failOnWarning: false", "    progressToStdout: false",
-              "    maxDuration: " + str(minutes * 60),
+              # Use the process-level timeout for cross-add-on compatibility.
+              # Some installed ZAP AF versions reject env.parameters.maxDuration.
               "jobs:", "  - type: requestor", "    requests:"]
     for p in scope["seeds"]:
         lines += ["      - url: " + yamlq(scope["target"] + p),
@@ -237,6 +238,15 @@ def plan_yaml(scope: dict) -> str:
             "      maxChildren: 10",
             "      acceptCookies: false",
             "      parseGit: false",
+            "      parseRobotsTxt: false",
+            "      parseSitemapXml: false",
+            "      parseDsStore: false",
+            "      parseSVNEntries: false",
+            "      parseComments: false",
+            "      postForm: false",
+            "      processForm: false",
+            "      maxParseSizeBytes: 262144",
+            "      threadCount: 1",
             "      logoutAvoidance: true",
             "  - type: activeScan",
             "    parameters:",
@@ -325,6 +335,39 @@ def validate_generated(scope_file: Path, out: Path) -> tuple[dict, dict]:
         raise ValueError("Plan has already been executed; create a new run folder")
     return scope, manifest
 
+def receipt_valid(scope: dict, digest: str, manifest: dict, output: Path) -> tuple[bool, str]:
+    """Check runner-recorded receipt hash parity; NOT a signature/authenticity proof."""
+    receipt = output / "runner-receipt.json"
+    report = output / "zap-raw-private.json"
+    plan = output / "zap-plan.yaml"
+    if not receipt.is_file():
+        return False, "RUNNER_RECEIPT_MISSING"
+    try:
+        if receipt.is_symlink() or receipt.stat().st_size > 8192:
+            return False, "RUNNER_RECEIPT_UNSAFE"
+        data = json.loads(receipt.read_text("utf-8"))
+        if (data.get("schema_version") != 1 or
+                data.get("execution_path") != "WITCHDOG_RUNNER" or
+                data.get("engagement_id") != scope["id"] or
+                data.get("scope_sha256") != digest or
+                data.get("plan_sha256") != manifest.get("plan_sha256") or
+                data.get("precheck_exit_code") != 0 or
+                data.get("autorun_exit_code") not in (0, 2) or
+                manifest.get("execution_path") != "WITCHDOG_RUNNER" or
+                manifest.get("execution_state") not in ("COMPLETE", "COMPLETE_WITH_WARNINGS") or
+                manifest.get("exit_code") != data.get("autorun_exit_code")):
+            return False, "RECEIPT_MANIFEST_MISMATCH"
+        if not plan.is_file() or sha256(plan.read_bytes()) != data.get("plan_sha256"):
+            return False, "PLAN_DIGEST_MISMATCH"
+        if (not report.is_file() or report.is_symlink() or
+                report.stat().st_size > MAX_ZAP_REPORT or
+                sha256(report.read_bytes()) != data.get("report_sha256")):
+            return False, "REPORT_DIGEST_MISMATCH"
+        return True, "WITCHDOG_RUNNER_RECEIPT_MATCHED"
+    except (OSError, ValueError, TypeError):
+        return False, "RECEIPT_INVALID"
+
+
 def execute(scope_file: Path, out: Path, approval_ref: str,
             zap_bin: str, confirm_active: bool) -> int:
     scope, manifest = validate_generated(scope_file, out)
@@ -336,21 +379,44 @@ def execute(scope_file: Path, out: Path, approval_ref: str,
     if not binary:
         raise ValueError("ZAP binary not installed; do not download/execute an unpinned binary")
     plan_path = str((out / "zap-plan.yaml").resolve())
-    # Validate the ZAP Automation Framework syntax before touching the target.
+    # Exit 2 on -autocheck may mean unsupported parameters/add-on warnings.
+    # Fail closed: never bypass syntax checks by running -autorun directly.
     try:
         check = subprocess.run([binary, "-cmd", "-autocheck", plan_path],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                cwd=out, timeout=75, check=False, shell=False)
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise ValueError("ZAP pre-execution plan validation unavailable") from exc
+        manifest["execution_state"] = "HELD_PRECHECK_UNAVAILABLE"
+        manifest["execution_path"] = "WITCHDOG_RUNNER"
+        write_private(out, "manifest.json", json.dumps(manifest, indent=2) + "\n")
+        raise ValueError("ZAP pre-execution validation unavailable; never bypass") from exc
+    manifest["precheck_exit_code"] = check.returncode
+    manifest["execution_path"] = "WITCHDOG_RUNNER"
     if check.returncode != 0:
-        raise ValueError("ZAP rejected plan syntax; no network test launched")
-    cmd = [binary, "-cmd", "-autorun", plan_path]
-    # ZAP needs an external firewall/egress gateway. YAML context is not a sandbox.
+        stdout = getattr(check, "stdout", b"")
+        stderr = getattr(check, "stderr", b"")
+        # Keep diagnostics private; never echo plan details or client paths
+        # into CI logs or remote agent prompts.
+        raw = b""
+        for item in (stdout, stderr):
+            if isinstance(item, bytes):
+                raw += item[:8192] + b"\n"
+            elif isinstance(item, str):
+                raw += item.encode("utf-8", errors="replace")[:8192] + b"\n"
+        if raw:
+            write_private(out, "zap-precheck-private.log",
+                          raw[:16384].decode("utf-8", errors="replace"))
+            manifest["precheck_diagnostics_present"] = True
+        manifest["execution_state"] = "HELD_PRECHECK_NONZERO"
+        write_private(out, "manifest.json", json.dumps(manifest, indent=2) + "\n")
+        raise ValueError("ZAP -autocheck returned " + str(check.returncode) +
+                         "; inspect installed ZAP/add-on compatibility offline; no requests sent")
     manifest["execution_state"] = "STARTED"
+    manifest["started_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
     write_private(out, "manifest.json", json.dumps(manifest, indent=2) + "\n")
     try:
-        completed = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        completed = subprocess.run([binary, "-cmd", "-autorun", plan_path],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                                    cwd=out, timeout=scope["minutes"] * 60 + 90,
                                    check=False, shell=False)
         rc = completed.returncode
@@ -358,10 +424,47 @@ def execute(scope_file: Path, out: Path, approval_ref: str,
         rc = 124
     except OSError:
         rc = 125
+    report = out / "zap-raw-private.json"
+    report_ok = (report.is_file() and not report.is_symlink()
+                 and 0 < report.stat().st_size <= MAX_ZAP_REPORT)
+    if report_ok:
+        try:
+            raw_report = json.loads(report.read_text("utf-8"))
+            sites = raw_report.get("site") if isinstance(raw_report, dict) else None
+            report_ok = isinstance(sites, list) and len(sites) <= 50
+            for site in (sites or []):
+                if not isinstance(site, dict) or not isinstance(site.get("@name"), str):
+                    report_ok = False
+                    break
+                parsed = urlsplit(site["@name"])
+                if exact_origin(parsed.scheme + "://" + parsed.netloc) != scope["target"]:
+                    report_ok = False
+                    break
+        except (OSError, ValueError, TypeError, UnicodeError, json.JSONDecodeError):
+            report_ok = False
+    state = ("COMPLETE" if rc == 0 and report_ok else
+             "COMPLETE_WITH_WARNINGS" if rc == 2 and report_ok else "PARTIAL")
     manifest["exit_code"] = rc
-    manifest["execution_state"] = "COMPLETE" if rc == 0 else "PARTIAL"
-    manifest["zap_report_present"] = (out / "zap-raw-private.json").is_file()
+    manifest["execution_state"] = state
+    manifest["zap_report_present"] = report_ok
     manifest["completed_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
+    if report_ok and rc in (0, 2):
+        digest = load_scope(scope_file, for_execution=True)[2]
+        receipt = {
+            "schema_version": 1,
+            "execution_path": "WITCHDOG_RUNNER",
+            "engine_version": VERSION,
+            "engagement_id": scope["id"],
+            "scope_sha256": digest,
+            "plan_sha256": manifest["plan_sha256"],
+            "report_sha256": sha256(report.read_bytes()),
+            "precheck_exit_code": check.returncode,
+            "autorun_exit_code": rc,
+            "state": state,
+            "note": "Digest/receipt parity only; not cryptographic publisher authenticity",
+        }
+        write_private(out, "runner-receipt.json", json.dumps(receipt, indent=2) + "\n")
+        manifest["report_sha256"] = receipt["report_sha256"]
     write_private(out, "manifest.json", json.dumps(manifest, indent=2) + "\n")
     return rc
 
@@ -417,7 +520,14 @@ def normalize_zap(scope_file: Path, out: Path) -> dict:
                 "occurrences": len(entries),
                 "status": "CANDIDATE_NEEDS_INDEPENDENT_VALIDATION",
             })
+    manifest_path = out / "manifest.json"
+    manifest = json.loads(manifest_path.read_text("utf-8")) if manifest_path.is_file() else {}
+    parity, receipt_status = receipt_valid(scope, digest, manifest, out)
+    if (out / "runner-receipt.json").exists() and not parity:
+        raise ValueError("Runner receipt integrity check failed: " + receipt_status)
     result = {
+        "integrity_status": receipt_status,
+        "execution_attribution": "RUNNER_RECORDED" if parity else "EXTERNAL_UNVERIFIED",
         "schema_version": 1, "engagement_id": scope["id"], "tool": "OWASP_ZAP",
         "mode": scope["mode"], "source_digest": digest,
         "observation": "SCANNER_REPORTED_NOT_INDEPENDENTLY_VERIFIED",
@@ -425,6 +535,7 @@ def normalize_zap(scope_file: Path, out: Path) -> dict:
             "ZAP alerts are candidates, not independently verified exploitation.",
             "Raw report may contain sensitive evidence; keep in private tenant storage.",
             "Not equivalent to complete WSTG/ASVS or manual VAPT.",
+            "External -autorun without a valid Witch Dog runner receipt is NOT an attested execution.",
             "Out-of-scope and untested authorization/business logic remain UNKNOWN.",
         ]}
     write_private(out, "zap-sanitized.json", json.dumps(result, indent=2, ensure_ascii=True) + "\n")
@@ -504,9 +615,12 @@ def main(argv=None) -> int:
             return 0
         if args.command == "execute":
             rc = execute(args.scope, out, args.approval_ref, args.zap_bin, args.ack_impact)
-            print("Witch Dog ZAP execution finished with tool exit " + str(rc) +
-                  ". Raw evidence private. Run ingest separately.")
-            return 0 if rc == 0 else 2
+            state = json.loads((out / "manifest.json").read_text("utf-8")).get("execution_state")
+            print("Witch Dog ZAP execution state=" + str(state) +
+                  ", exit=" + str(rc) + ". Raw evidence private; ingest separately.")
+            # ZAP exit 2 means completed-with-warnings only when a raw report
+            # and runner receipt exist. No direct-execution bypass is allowed.
+            return 0 if state in ("COMPLETE", "COMPLETE_WITH_WARNINGS") else 2
         result = normalize_zap(args.scope, out)
         print("Witch Dog sanitized " + str(len(result["alerts"])) +
               " ZAP alerts; all require independent triage.")

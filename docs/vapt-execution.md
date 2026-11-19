@@ -2,6 +2,16 @@
 
 **Version:** WEB-VAPT-ALPHA-01. This adds actual OWASP ZAP dynamic testing, scope/impact controls, synthetic-role status assertions, and agent-driven investigation. It is **not** a turnkey certified penetration-test service: authenticated browser replay, complex workflow testing, manual exploit verification, full attack-surface discovery and independent external network policy are not yet automated.
 
+## ZAP validation, warning codes and external evidence (2026-11-20)
+
+A passive pilot found that an installed ZAP Automation Framework rejected the generated Environment-level `maxDuration` option. Witch Dog now omits this compatibility-sensitive field and enforces an external subprocess timeout. New active spider plans also disable form POSTs and auxiliary sitemap/robots discovery by default. **The exact installed ZAP build and add-ons must still pass `-autocheck` and real lab qualification**.
+
+A nonzero `-autocheck`, including code 2, now records `HELD_PRECHECK_NONZERO` with no outbound scan; never bypass this by running direct `zap -autorun`. `-autorun` code 2 after a clean precheck means ZAP reported warnings; with a bounded report and matched `runner-receipt.json`, Witch Dog stores `COMPLETE_WITH_WARNINGS` and the consolidated report says `EXECUTED_WITH_WARNINGS`. Warnings require operator review. Other return codes or missing reports remain PARTIAL.
+
+A direct/manual ZAP run can be ingested privately for diagnostic triage, but `execution_attribution=EXTERNAL_UNVERIFIED` and the VAPT stage cannot be marked executed solely by editing a JSON manifest. The runner receipt contains SHA-256 hashes of scope, plan and report plus exit values. It proves recorded file parity, not a signed runner identity, honest firewall isolation or verified client consent.
+
+The passive pilot checked one root endpoint with two tools: multiple header observations are not independent demonstrations of exploitability or extensive test coverage. Detailed lessons are in [generalized security audit handoff](security-lessons-20261120.md).
+
 ## Why the old report said NOT_A_VAPT
 
 `web_baseline.py` v0.2.0 deliberately makes only one GET request. That can establish a few HTTP/TLS facts but cannot explore authentication, business logic, APIs, injection, sensitive data or tenant boundaries. We keep that deterministic safety probe as **Stage 0**, but do not call it the completed assessment.
@@ -93,6 +103,7 @@ Cookie-authenticated workflows, role transitions, in-browser behavior, CSRF, upl
 ### 6. Agentic security analysis and fix/retest
 
 After the deterministic phases, the coding agent:
+- Reads the [identity and authorization checklist](../checklists/identity-authorization-v1.md), checking alternate sensitive routes, token issuers/relying services, per-request tenant policy and source-versus-runtime proof.
 - Reads only sanitized scanner outputs plus authorized source files (never secrets).
 - Builds a threat model and a matrix of routes/roles/objects/controls from actual architecture evidence.
 - Correlates suspicious dynamic behavior with source code and any prior independently confirmed findings.

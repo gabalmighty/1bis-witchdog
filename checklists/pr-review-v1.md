@@ -18,6 +18,12 @@ This catalog governs a security-focused CHANGED-LINES code review. It supplement
 
 **Business invariants / code quality:** Review race conditions, improper state transitions, wrong default roles, temporary password generation, data loss, null/error paths, external call retries and idempotency. Verify regression tests, rollback and compatibility where affected. Focus on change-specific consequences, not style volume.
 
+## Cross-service identity and authorization review extension
+
+When a PR touches an identity provider, API, database query, role/tenant model, account lifecycle, route exception or deployment secrets, include the relevant [identity/authorization checks](identity-authorization-v1.md). Specifically inspect fallbacks and multi-secret acceptance, token audience/issuer/expiry, authorization source of truth, user-role changes, direct API privilege boundaries, generic/legacy alternate endpoints, destructive operations, NoSQL query objects and tenant overrides, URL token handoffs, upload/download ACLs, and suspicious dormant artifacts.
+
+A narrow changed-lines review is insufficient to establish that another endpoint cannot bypass the same business invariant. Open a **coverage gap** when adjacent source is outside review scope. Avoid declaring live exploitability from a regex or code inspection alone. No private secrets or client findings should appear in public PR comments.
+
 ## Finding format
 
 Every actionable finding needs: stable ID, rule/checklist control, changed file + NEW line, impacted trust boundary, evidence class, confidence, consequence, mitigation and independent retest. Use:
