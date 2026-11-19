@@ -203,7 +203,7 @@ def check_headers(target: dict, observed: dict) -> list[dict]:
             cookie_warnings += 1
     if cookie_count:
         add("WEB-05.01", "WARN" if cookie_warnings else "PASS",
-            str(cookie_count) + " Set-Cookie header(s) inspected for flags only; " +
+            str(cookie_count) + " cookie header(s) inspected for flags only; " +
             str(cookie_warnings) + " flag concern(s); cookie names/values NOT stored")
     else:
         add("WEB-05.01", "N/A", "No Set-Cookie headers on this single response; session flow NOT tested")
@@ -234,7 +234,7 @@ def perform(target: dict) -> dict:
     record = {"schema_version": 1, "tool": "witchdog-web-baseline",
         "version": VERSION, "timestamp_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
         "origin": target["origin"], "authorized": True, "mode": "BASELINE",
-        "request_count": 0, "redirects_followed": 0, "state": "UNKNOWN",
+        "request_count": 0, "network_attempts": 0, "redirects_followed": 0, "state": "UNKNOWN",
         "evidence_class": "REMOTE_OBSERVED", "findings": [],
         "limitations": [
             "The scanner inspected only root /; all other routes and most checklist controls remain UNKNOWN",
@@ -244,6 +244,7 @@ def perform(target: dict) -> dict:
         ]}
     try:
         ips = pinned_addresses(target)
+        record["network_attempts"] = 1
         observed = one_request(target, ips[0])
         record["request_count"] = 1
         record["status_code"] = observed["status"]
@@ -254,6 +255,7 @@ def perform(target: dict) -> dict:
             record["limitations"].append("Response may be auth/rate-limit/WAF/challenge; do not infer application safety")
     except (ValueError, ssl.SSLError, OSError, http.client.HTTPException) as error:
         record["state"] = "BLOCKED"
+        record["evidence_class"] = "UNKNOWN"
         record["limitations"].append("Request/DNS/TLS prevented observation: " + type(error).__name__)
         if isinstance(error, ssl.SSLError):
             record["findings"].append({"control_id": "WEB-02.01", "verdict": "WARN",
