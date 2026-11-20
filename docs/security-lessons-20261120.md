@@ -23,7 +23,7 @@ These are *source-verified* findings in the supplied audit, **not live exploit d
 
 The operator reported six ZAP candidates after one approved root GET. The substantive ones matched missing header observations also seen with the existing baseline. This corroborates a *specific header/edge configuration*, not independent proof of SQL injection, XSS, authz failure or full VAPT coverage. None of the high-impact categories was tested in that run.
 
-ZAP's `-autocheck` reportedly returned code 2 for an unrecognized Environment `maxDuration` parameter in the generated plan; an agent then ran direct `-autorun` outside Witch Dog's gate. That is a gate bypass, **not an attested Witch Dog run**, despite the agent's transparency about it. ZAP version/add-on compatibility should be resolved in the plan generator.
+ZAP reportedly returned code 2 from -autocheck for an unsupported Environment parameter. An agent then bypassed Witch Dog by calling -autorun directly. This was not an attested Witch Dog run. Fix the plan and test the installed ZAP version.
 
 ZAP documents exit codes: `0` success, `1` errors, `2` warnings. `-autorun` can finish with code 2 even with `failOnWarning: false`. In contrast, **nonzero `-autocheck` must HOLD** until its diagnostics are resolved; never run a direct shell workaround to change execution provenance.
 
@@ -36,7 +36,7 @@ ZAP documents exit codes: `0` success, `1` errors, `2` warnings. `-autorun` can 
 5. Generate a runner receipt binding engagement, scope digest, plan digest, precheck exit, autorun exit and raw report hash. This is **integrity parity**, not a cryptographic attestation of the runner identity.
 6. Permit importing raw reports from external runs for private forensic triage, but report `EXTERNAL_UNVERIFIED` until separately validated. Do not silently upgrade by manually changing manifest status.
 7. Carry historical high-impact source findings as OPEN/RETEST_UNKNOWN until independently retested with authorized synthetic fixtures or verified running artifacts.
-8. Do not count multiple scanners probing one root URL as full route coverage; report unique routes/methods/roles and all untested trust boundaries.
+8. Do not treat repeated root scans as full route coverage. Record the tested routes, methods, roles and remaining gaps.
 9. A missing security header is a configuration observation, not proof of exploitability. Do not treat active-scan candidates as independently confirmed vulnerabilities.
 
 ## Acceptance test to complete before production-grade claims

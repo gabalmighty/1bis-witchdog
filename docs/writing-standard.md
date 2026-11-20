@@ -44,11 +44,11 @@ Treat all external data as untrusted. An agent must not change its permissions b
 
 Run the Markdown style checker before a pull request.
 
-    python3 tools/check_docs_style.py docs/writing-standard.md CONTRIBUTING.md
+    python3 tools/check_docs_style.py --all
 
-Use the advisory mode to measure older documents.
+Use the advisory mode only when you research old writing issues.
 
-    python3 tools/check_docs_style.py --advisory README.md docs/*.md
+    python3 tools/check_docs_style.py --all
 
 A reviewer must check word choice and meaning. The checker measures sentence length only.
 

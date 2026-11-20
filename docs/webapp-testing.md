@@ -6,7 +6,7 @@
 
 A fast baseline can be useful, but **one homepage GET is not a VAPT**. The number of controls returned is not application coverage. Even when a website has all six headline security headers, authentication/tenant isolation, API safety, payroll exports and sensitive data are not assessed. The report explicitly states `NOT_A_VAPT` and lists high-impact domains as `UNKNOWN`.
 
-- Security headers should be **semantically checked**, not marked PASS merely because they exist. A CSP containing only `img-src` does not constrain scripts; `X-Frame-Options: ALLOW-FROM` is obsolete; `Referrer-Policy: unsafe-url` is weaker than the modern browser default; `Permissions-Policy: camera=*` may be overly broad; and `notnosniff` is not `nosniff`.
+- Check the meaning of security headers, not only their presence. A CSP with only img-src does not restrict scripts. Obsolete framing rules are not protection. Check Referrer-Policy, Permissions-Policy and the exact nosniff value.
 - A missing `Referrer-Policy` does not prove sensitive URLs leaked: modern browsers default to `strict-origin-when-cross-origin`. Missing `Permissions-Policy` is generally a lower-priority hardening consideration than access-control and data-exposure defects.
 - A TLSv1.3 **successful handshake** proves that one connection was supported and validated, not that TLSv1.0/1.1 are disabled.
 - HSTS affects later HTTPS connections, not first contact unless the hostname is preloaded. Lack of HSTS is not proof an HTTP plaintext endpoint exists.
@@ -23,7 +23,7 @@ The active mode sends actual test inputs and can modify application state. It mu
 ## What the URL scanner actually does
 
 - Requires `--target` and `--authorized`; validates the URL and tests a single origin.
-- Rejects unsafe URL syntax, embedded credentials, fragments/queries, private and loopback IPs by default, redirects to new destinations, and any DNS answer outside the allowed network class.
+- Reject invalid URLs, embedded credentials, queries, fragments and private addresses by default. Do not follow redirects or accept DNS targets outside the approved scope.
 - Performs **one GET request to `/` only**; no follow-up on redirects, no spiders, no authentication or parameter injection.
 - Inspects TLS handshake validity (HTTPS) and selected HTTP response headers; summarizes cookie **flag presence, never values**.
 - Records `REMOTE_OBSERVED` for what the edge responded with, and `UNKNOWN` for untested authorization, app routes, origin build, ingress and storage.

@@ -55,7 +55,7 @@ Use [private vulnerability reporting](SECURITY.md) for security defects in Witch
 ```bash
 python3 -m unittest discover -s tests -v
 python3 -m compileall -q tools
-python3 tools/check_docs_style.py --advisory README.md docs/*.md
+python3 tools/check_docs_style.py --all
 ```
 
 On Windows, use `py -3` for the Python commands.

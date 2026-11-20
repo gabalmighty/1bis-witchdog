@@ -1,12 +1,12 @@
 # Witch Dog — Agentic PR Review for GitHub Actions and Local CI
 
-A portable security review engine, with two adapters: one composite GitHub Action and one Python CLI running on Windows, Linux, NUC, Hyper-V guests, internal build servers, or a manually triggered OpenCode session. Both use the same deterministic scanner, checklist and risk language. This is a scoped PR change review, not a comprehensive VAPT, malware forensics exercise, or live production audit.
+Witch Dog has two review adapters. One is a GitHub Action. The other is a Python CLI for local CI hosts. Both use the same security rules. This is a PR change review, not a full VAPT or runtime audit.
 
 ## 1. Fastest GitHub adoption
 
 Inside the target repository create .github/workflows/witchdog-review.yml using the sample at examples/witchdog-github-review.yml. It contains a single reusable Action reference:
 
-    uses: gabalmighty/witchdog@f4dff91185e3e04eb79c693769e5f20f13bcf2f6
+    uses: gabalmighty/1bis-witchdog@7e9bef9f1d6e354a620555f159a0fb03e4cd7e74
 
 The sample pins a reviewed 40-character commit SHA. Keep executable code pinned to an approved Witch Dog release/commit; update that pin only through a reviewed PR. Newer checklist data can continue to refresh from the latest audited main revision without updating scripts.
 
@@ -67,7 +67,7 @@ The reviewer never executes PR code. The model runs in a separate temporary fold
 
 ## 4. Keep checklists current without unreviewed code execution
 
-tools/pr_policy.py fetches only a strict allowlist of Markdown files from the public Witch Dog repository, resolving main to a concrete SHA and recording the policy hashes. It does not auto-download executables, install packages or alter AI tool permissions. If network fetch fails, it uses a reviewed bundled checklist and records degraded freshness. Production adoption should pin the composite Action to a reviewed commit even when the policy DATA updates.
+tools/pr_policy.py fetches approved Markdown files from Witch Dog. It resolves main to a commit and records file hashes. It does not download code or change permissions. A failed fetch uses bundled rules and marks them as stale. Pin the Action to a reviewed commit.
 
 Policy Markdown is reference data, not an instruction source that can override the shipped tool policy.
 
@@ -92,8 +92,8 @@ Policy Markdown is reference data, not an instruction source that can override t
 
 ## Reference and caveat
 
-Inspired by the PR-comment/memory UX of the third-party Marketplace Action by Emeteil, but Witch Dog uses its own implementation for permission boundaries and self-hosted portability. Consult official GitHub Actions Secure Use and OpenCode V2 documentation. OpenCode permissions are not an OS security sandbox; for confidential clients, run the AI service in an actual isolated VM with a client-approved provider.
+The external Marketplace action inspired the PR comment design. Witch Dog uses separate code for permissions and local CI. Read the official GitHub and OpenCode security guides. OpenCode permissions are not an OS sandbox. Use isolated VMs for private clients.
 
 ## Cross-service identity and authorization extensions
 
-The reviewer also consumes `checklists/identity-authorization-v1.md` as versioned reference data. For changed endpoints that create accounts, mutate roles/passwords, reset records, accept raw query objects, upload/export files, or transfer JWTs between applications, investigate whether generic/legacy alternate endpoints bypass an otherwise protected business operation. A changed-lines review cannot prove no such path exists; record missing context as UNKNOWN. Do not publish client findings, raw token values or incident IOCs in a PR comment.
+The reviewer reads the identity authorization checklist as data. Check account creation, role changes, password resets and file access. Check raw query objects and token transfers. Look for generic routes that bypass protected operations. Record UNKNOWN when the change lacks context. Do not publish private findings.

@@ -8,8 +8,8 @@ Source: operator-provided read-only pilot summary for an application with two ad
 2. Development-server source configuration advertised a broad listening interface, but actual workstation installs and reachability were unverified.
 3. A source Dockerfile did not ship certain development dependencies, yet the running image digest was not available.
 4. An upstream web-server image was from an affected release family, while repository configuration appeared not to enable the relevant features. The actual running config and vendor build were unknown.
-5. A similarly named ingress controller was a **different product/distribution**; its version and the actual ingress path had not been established.
-6. Infrastructure declared host-published datastore/observability/debug ports and possible default values; whether they were externally reachable or running with placeholder credentials remained unknown.
+5. A similar ingress name referred to a different product. The deployed version and network route remained unknown.
+6. The source declared host-published data, monitoring and debug ports. Actual external access and live password values remained unknown.
 7. The prototype used sanitized and SHA-256-hashed input manifests plus deterministic post-run validation — valuable architecture for an AI worker.
 8. Runtime verification, KEV/EPSS enrichment and adversarial regression were absent. The worker was a read-only child session, **not a hardened disposable VM**.
 

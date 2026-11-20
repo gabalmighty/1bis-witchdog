@@ -1,14 +1,14 @@
 # Witch Dog — Agentic VAPT execution guide (experimental)
 
-**Version:** WEB-VAPT-ALPHA-01. This adds actual OWASP ZAP dynamic testing, scope/impact controls, synthetic-role status assertions, and agent-driven investigation. It is **not** a turnkey certified penetration-test service: authenticated browser replay, complex workflow testing, manual exploit verification, full attack-surface discovery and independent external network policy are not yet automated.
+**Version:** WEB-VAPT-ALPHA-01. This release adds ZAP tests, scope gates, synthetic role checks and agent review. It does not automate browser sessions, complex workflows, full discovery or a certified penetration test.
 
 ## ZAP validation, warning codes and external evidence (2026-11-20)
 
 A passive pilot found that an installed ZAP Automation Framework rejected the generated Environment-level `maxDuration` option. Witch Dog now omits this compatibility-sensitive field and enforces an external subprocess timeout. New active spider plans also disable form POSTs and auxiliary sitemap/robots discovery by default. **The exact installed ZAP build and add-ons must still pass `-autocheck` and real lab qualification**.
 
-A nonzero `-autocheck`, including code 2, now records `HELD_PRECHECK_NONZERO` with no outbound scan; never bypass this by running direct `zap -autorun`. `-autorun` code 2 after a clean precheck means ZAP reported warnings; with a bounded report and matched `runner-receipt.json`, Witch Dog stores `COMPLETE_WITH_WARNINGS` and the consolidated report says `EXECUTED_WITH_WARNINGS`. Warnings require operator review. Other return codes or missing reports remain PARTIAL.
+A nonzero -autocheck returns HELD_PRECHECK_NONZERO. Do not bypass this gate. After a clean precheck, ZAP -autorun code 2 means warnings. A valid report and runner receipt are required for EXECUTED_WITH_WARNINGS. Other errors remain PARTIAL.
 
-A direct/manual ZAP run can be ingested privately for diagnostic triage, but `execution_attribution=EXTERNAL_UNVERIFIED` and the VAPT stage cannot be marked executed solely by editing a JSON manifest. The runner receipt contains SHA-256 hashes of scope, plan and report plus exit values. It proves recorded file parity, not a signed runner identity, honest firewall isolation or verified client consent.
+You can import a direct ZAP run for private review. Mark its evidence EXTERNAL_UNVERIFIED. Do not mark it EXECUTED by editing a manifest. The receipt binds scope, plan, report hashes and exit codes. It does not prove runner identity or network isolation.
 
 The passive pilot checked one root endpoint with two tools: multiple header observations are not independent demonstrations of exploitability or extensive test coverage. Detailed lessons are in [generalized security audit handoff](security-lessons-20261120.md).
 
@@ -36,7 +36,7 @@ python3 tools/vapt.py init --target https://staging.example.invalid --output .wi
 
 On Windows PowerShell, use `py -3` in place of `python3`. The draft is saved to `.witchdog/vapt/my-engagement/engagement.json` and is **intentionally ineligible** for execution until the human validates the scope. This is a private, gitignored path.
 
-Document, outside public Git: exact target origin, staging/isolated environment owner, expiration window (up to 7 days per execution), approved email contact, safe GET seed paths, allow/deny route prefixes, test accounts and synthetic objects, maximum scanner duration, explicit permission for active testing, independently enforced target-only egress, and a verified snapshot/restore path. Do not put credentials in JSON; role tokens come from the local process environment.
+Record the exact origin, owner, expiry, contact and approved paths in private storage. Record test accounts, synthetic fixtures, test limits and active-test approval. Verify target-only network access and the restore snapshot. Do not put credentials in JSON.
 
 ### 2. Make preflight and review the deterministic test plan
 
@@ -67,7 +67,7 @@ Omit `--ack-impact` for passive scans; it is required for active scans. `--appro
 
 On Windows, the ZAP launch may require an installed Windows ZAP command path (`--zap-bin zap.bat`) or a restricted Linux/WSL worker. The default runner **does not create a VM**. Running a privileged local ZAP process in the same host as production is not recommended.
 
-The tool runs ZAP with `-cmd -autorun` without invoking a shell and with a process-level timeout. It does not print raw tool output. If the scanner is missing, authorization expires, plan hash changes, the approval does not match, or the run is repeated in the same folder, execution is **held**.
+The tool runs ZAP without a shell. It applies a process timeout and hides raw output. It holds execution when the scanner, permission, plan hash or approval is invalid. Each run needs a new output folder.
 
 ### 4. Convert raw alerts to privacy-minimized evidence
 
@@ -75,7 +75,7 @@ The tool runs ZAP with `-cmd -autorun` without invoking a shell and with a proce
 python3 tools/vapt.py ingest --scope .witchdog/vapt/my-engagement/engagement.json --output .witchdog/vapt/my-engagement/run-01
 ```
 
-`zap-raw-private.json` can contain request/response fragments or sensitive application data; **never attach it to a public GitHub PR or send it to a remote LLM by default**. The ingest command writes `zap-sanitized.json` with bounded alert names, IDs, risk and occurrence counts, dropping raw URLs and evidence payloads. It rejects sites outside the approved origin. A scanner alert is a candidate requiring independent verification and analyst triage.
+A raw ZAP report can contain sensitive request data. Never publish it or send it to an unapproved model. The ingest tool saves bounded alert names and counts without raw URLs or payloads. Review each candidate independently.
 
 ### 5. Run synthetic authorization checks
 

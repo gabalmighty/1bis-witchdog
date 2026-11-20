@@ -32,6 +32,17 @@ class DocsStyleTests(unittest.TestCase):
                 self.assertEqual([], errors[:8],
                                  "Review long sentences in " + name)
 
+    def test_all_public_markdown_uses_short_sentences(self):
+        paths = list(ROOT.glob("*.md"))
+        paths.extend((ROOT / "docs").rglob("*.md"))
+        paths.extend((ROOT / "checklists").rglob("*.md"))
+        failures = {}
+        for path in paths:
+            errors = style.checks(path)
+            if errors:
+                failures[str(path.relative_to(ROOT))] = errors[:8]
+        self.assertEqual({}, failures)
+
     def test_detects_long_prose_but_ignores_fenced_code(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "test.md"
