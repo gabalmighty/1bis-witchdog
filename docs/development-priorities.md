@@ -8,10 +8,10 @@ Use separate branches and reviewed pull requests for each workstream.
 
 | Issue | Work | Next action |
 |---|---|---|
-| [#21](https://github.com/gabalmighty/witchdog/issues/21) | Complete CISA KEV feed and scheduled PR delivery | Store all KEV entries. Verify an actual scheduled run. |
+| [#21](https://github.com/gabalmighty/witchdog/issues/21) | Intelligence reliability | Complete catalog and bot PR verified. Check cron and external alert. |
 | [#24](https://github.com/gabalmighty/witchdog/issues/24) | Scan current and historical Git secrets | Build a pinned offline scanner adapter with private, redacted evidence. |
 
-Do not mark the feed scheduler as verified after only a manual run.
+The full catalog and bot PR are verified through #28 and #29. Do not mark cron verified after a push or manual run.
 
 Do not mark secret scanning as PASS when only file names were checked.
 

@@ -62,6 +62,20 @@ A fresh feed can create a larger data-only review PR. Check its schema and sourc
 
 The published catalog is still advisory data. It does not prove that a scanned asset is affected.
 
+## Full-catalog deployment verification
+
+[PR #28](https://github.com/gabalmighty/witchdog/pull/28) removed the 75-item CISA KEV limit.
+
+[Run #44729590165](https://github.com/gabalmighty/witchdog/actions/runs/44729590165) fetched and validated the complete catalog.
+
+GitHub Actions created [data PR #29](https://github.com/gabalmighty/witchdog/pull/29) without a maintainer workaround.
+
+The validated data contains **1,786 KEV entries** and **13 Zero Wire entries**.
+
+The data-only PR was reviewed and merged. All 88 prior entries remain in the catalog.
+
+This verifies the live feed and bot PR path. Cron delivery and an independent host alert remain unverified.
+
 ## Schedule
 
 | UTC | Asia/Manila |
