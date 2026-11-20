@@ -70,6 +70,31 @@ class ScannerTests(unittest.TestCase):
         self.assertEqual(intel.parse_kev(KEV)[0]["cve"], "CVE-2026-12345")
         with self.assertRaises(ValueError):
             intel.parse_zero_wire(b"<!DOCTYPE a><rss/>")
+    def test_zero_wire_official_feed_and_legacy_fallback(self):
+        self.assertEqual(intel.ZERO_WIRE,
+                         "https://radar.cloudflare.com/zero-wire/feed")
+        with mock.patch.object(intel, "fetch",
+                               side_effect=[ValueError("Redirect rejected"), RSS]) as mocked:
+            self.assertEqual(intel.fetch_zero_wire(), RSS)
+            self.assertEqual(mocked.call_args_list, [
+                mock.call(intel.ZERO_WIRE), mock.call(intel.ZERO_WIRE_LEGACY)
+            ])
+
+    def test_atom_feed_supported_without_external_requests(self):
+        atom = b'''<?xml version="1.0"?>
+        <feed xmlns="http://www.w3.org/2005/Atom">
+          <entry>
+            <title>Test security note</title>
+            <id>urn:witchdog:test</id>
+            <link href="https://radar.cloudflare.com/zero-wire/test" />
+            <updated>2026-11-20T00:00:00Z</updated>
+            <summary>Test summary</summary>
+          </entry>
+        </feed>'''
+        parsed = intel.parse_zero_wire(atom)
+        self.assertEqual(len(parsed), 1)
+        self.assertEqual(parsed[0]["source"], "cloudflare-zero-wire")
+
     def test_agent_allowlist_only_contains_exact_local_scan_commands(self):
         config = json.loads((ROOT / "opencode.jsonc").read_text(encoding="utf-8"))
         self.assertEqual(config["default_agent"], "witchdog")

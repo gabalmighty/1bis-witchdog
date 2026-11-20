@@ -14,6 +14,22 @@ The repository is new. The 60-day inactivity limit does not explain the missing 
 
 The exact cause is not confirmed. The available GitHub connection cannot read the workflow's enabled state.
 
+## First push-run result
+
+On November 20, the new push trigger started the intelligence workflow.
+
+The parser tests passed. Feed collection then returned a ValueError.
+
+Cloudflare's current Open feed link uses https://radar.cloudflare.com/zero-wire/feed.
+
+Witch Dog previously used the older security RSS path.
+
+The collector now uses the current URL and keeps the old path as a fallback.
+
+The source handler rejects redirects and reports a safe source error code.
+
+The next live run must confirm this fix.
+
 ## Schedule
 
 Witch Dog now uses these times:

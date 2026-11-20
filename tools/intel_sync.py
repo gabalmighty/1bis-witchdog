@@ -13,10 +13,11 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-ZERO_WIRE = "https://radar.cloudflare.com/security/zero-wire/rss"
+ZERO_WIRE = "https://radar.cloudflare.com/zero-wire/feed"
+ZERO_WIRE_LEGACY = "https://radar.cloudflare.com/security/zero-wire/rss"
 CISA_KEV = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 CISA_KEV_MIRROR = "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json"
-ALLOWED_URLS = {ZERO_WIRE, CISA_KEV, CISA_KEV_MIRROR}
+ALLOWED_URLS = {ZERO_WIRE, ZERO_WIRE_LEGACY, CISA_KEV, CISA_KEV_MIRROR}
 MAX_DOWNLOAD = 8_000_000
 MAX_ITEMS = 75
 
@@ -41,6 +42,24 @@ def fetch(url):
         if len(body) > MAX_DOWNLOAD:
             raise ValueError("Feed exceeded maximum size")
         return body
+
+def fetch_zero_wire():
+    """Use Cloudflare's official Open feed URL. Reject redirects."""
+    last = None
+    for label, url in (("OPEN_FEED", ZERO_WIRE), ("LEGACY_RSS", ZERO_WIRE_LEGACY)):
+        try:
+            payload = fetch(url)
+            parse_zero_wire(payload)
+            return payload
+        except (ValueError, urllib.error.URLError, TimeoutError,
+                OSError, ET.ParseError) as exc:
+            last = exc
+            # Only trusted source names and exception classes reach CI logs.
+            # Never echo untrusted feed contents or full redirect locations.
+            print("Cloudflare Zero Wire " + label + " HOLD: " +
+                  type(exc).__name__, file=sys.stderr)
+    raise ValueError("ZERO_WIRE_FEEDS_UNAVAILABLE") from last
+
 
 def fetch_kev():
     """Use the official CISA-maintained KEV GitHub mirror if cisa.gov blocks automated clients."""
@@ -67,8 +86,30 @@ def parse_zero_wire(raw):
         items.append({"id": "zero-wire:" + (guid or link), "source": "cloudflare-zero-wire",
                       "title": title, "url": link, "published": published, "summary": summary,
                       "source_kind": "CURATED_NEWS_NOT_PATCH_AUTHORITY"})
+    # Some feed clients use Atom. Preserve the same allowlist and size limits.
     if not items:
-        raise ValueError("Zero Wire RSS returned no valid entries")
+        for entry in root.findall(".//{*}entry")[:MAX_ITEMS]:
+            title = clean(entry.findtext("{*}title"), 180)
+            link_element = entry.find("{*}link")
+            link = clean(link_element.get("href", "") if link_element is not None else "", 500)
+            guid = clean(entry.findtext("{*}id"), 280)
+            published = clean(entry.findtext("{*}updated") or
+                              entry.findtext("{*}published"), 90)
+            summary = clean(entry.findtext("{*}summary") or
+                            entry.findtext("{*}content"), 220)
+            parsed = urllib.parse.urlparse(link)
+            if (not title or parsed.scheme != "https" or
+                    parsed.hostname not in ("radar.cloudflare.com",
+                                            "blog.cloudflare.com")):
+                continue
+            items.append({
+                "id": "zero-wire:" + (guid or link),
+                "source": "cloudflare-zero-wire", "title": title,
+                "url": link, "published": published, "summary": summary,
+                "source_kind": "CURATED_NEWS_NOT_PATCH_AUTHORITY",
+            })
+    if not items:
+        raise ValueError("Zero Wire feed returned no valid entries")
     return items
 
 def parse_kev(raw):
@@ -99,7 +140,7 @@ def build(zero_wire, kev):
             "advisories": sorted(uniques.values(), key=lambda x: (x["source"], x["id"]))}
 
 def sync(output):
-    z = fetch(ZERO_WIRE)
+    z = fetch_zero_wire()
     k = fetch_kev()
     result = build(z, k)
     if output.exists():
