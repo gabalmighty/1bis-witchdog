@@ -2,44 +2,49 @@
 
 ## Verified state — November 20, 2026
 
-Witch Dog uses GitHub Actions for public security feeds.
+Witch Dog collects public intelligence through GitHub Actions.
 
-The repository is public. Its default branch is main.
+The default branch is `main`. The data file is `data/intel/latest.json`.
 
-The first push-triggered intelligence run failed during feed collection.
+The first feed run failed because the Cloudflare feed path had changed.
 
-The collector used an old Cloudflare RSS path.
+PR #18 fixed the feed URL. The next push-triggered collector passed.
 
-PR #18 updated the URL to the official Open feed path.
+GitHub then blocked the bot from opening a data PR.
 
-The next push-triggered run collected data and passed schema validation.
+A maintainer recovered the first data update through PR #19.
 
-It fetched 13 Cloudflare Zero Wire items and 75 CISA KEV items.
+### Manual workflow verification
 
-The bot pushed the data branch, but GitHub denied pull request creation.
+The owner enabled GitHub Actions pull request creation.
 
-The run log shows this exact error: "GitHub Actions is not permitted to create or approve pull requests."
+[Manual run #44675875203](https://github.com/gabalmighty/witchdog/actions/runs/44675875203) completed successfully.
 
-A maintainer opened PR #19 with the same data branch.
+- Trigger: `workflow_dispatch` on `main`.
+- Started: 2026-11-20 04:39 UTC (12:39 Asia/Manila).
+- Collection, parser tests, and schema checks: **PASS**.
+- Artifact upload and download: **PASS**.
+- Data proposal job: **PASS**.
+- Data result: **No intelligence changes**.
+- Snapshot: **88 advisories** from **2 sources**.
 
-PR #19 passed tests and was merged into main.
+The workflow did not create a new PR because the current data matched `main`.
 
-**Current result:** Live collection works. GitHub Actions bot PR creation is still blocked by a repository setting.
+It removed the old `bot/public-intel-refresh` branch. This was expected.
 
-GitHub has not recorded a scheduled run yet. Push-trigger success does not prove cron delivery.
+**Result:** The manual collection and proposal pipeline works.
 
-## Owner action — enable the bot PR
+No `schedule` event has run yet. The manual result does not prove cron delivery.
 
-1. Open https://github.com/gabalmighty/witchdog/settings/actions
-2. Find **Workflow permissions**.
-3. Enable **Allow GitHub Actions to create and approve pull requests**.
-4. Save the setting.
-5. Open https://github.com/gabalmighty/witchdog/actions/workflows/intelligence.yml
-6. Select **Run workflow** on main.
-7. Check that both jobs pass.
-8. Confirm that a data change creates a review PR.
+### What updates automatically
 
-The workflow needs repository approval to create future PRs. It does not need permission to merge them.
+The workflow can propose changes to **`data/intel/latest.json` only**.
+
+It creates a review PR when normalized advisory data changes.
+
+It does not update this runbook or merge data without review.
+
+Use GitHub Actions for live run status. Update this document when the workflow design changes.
 
 ## Schedule
 
@@ -53,6 +58,8 @@ GitHub can delay or drop a scheduled event.
 The workflow also has a manual trigger.
 
 A push to main starts the feed job when its source files change.
+
+The manual run passed. The next scheduled run is still an open acceptance check.
 
 ## Monitor schedule delivery
 
