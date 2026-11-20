@@ -1,47 +1,102 @@
-# Witch Dog architecture and trust model
+# Witch Dog architecture
 
-## Design decisions
+## Purpose
 
-- **One prompt + one checklist.** Applicability is selected from evidence, not a guessed platform. The Python scanner captures reproducible local facts; the AI performs contextual analysis and suggests targeted tests.
-- **Separate public intel from private assets.** GitHub Actions fetches public advisories centrally. Client machines keep inventory and findings private; this public repo must not become a central client evidence database.
-- **Scan is not repair.** Local read-only collection and AI analysis run at lower privilege. Source modifications, PR publication, service restarts and deployment use separate authorization.
-- **Source vs running environment.** `SOURCE_DECLARED` (Dockerfile/manifest), `HOST_OBSERVED` (local OS), `LIVE_VERIFIED` (authenticated deployed image/config), `UNKNOWN` (insufficient evidence). Never promote one class to another.
-- **Model agnostic.** AI provider routes may be chosen per tenant, sensitivity, latency and quality; record model/version, prompt/knowledge version and evidence digests. Deterministic checks remain model independent.
+Witch Dog joins deterministic tests with controlled agent investigation.
+
+The project works on local hosts, Git repositories, and approved web applications.
 
 ## Trust boundaries
 
-1. Public RSS/JSON: HTTPS, source allowlist, response size/time limits, schema validation and escaping. Treat all text as untrusted data. Never execute feed content or let it mutate prompt/tool policy.
-2. Local inspector: normal unprivileged user, explicitly bounded directory, no symlink traversal, no secret values, no host process/service mutation, no remote probes. The shipped inspector does not make a live vulnerability assessment.
-3. AI worker: sanitized/minimized evidence, approved model provider, ephemeral isolated execution when possible, no privileged host mounts, no production network, no client credentials, no unattended shell.
-4. Git fixes: per-target-repo branch and tests, reviewed PR, separate deploy approval, post-deploy running-image verification; no auto-merge.
-5. Customer tenancy: encrypt/private-store sensitive evidence; retain hashes/metadata for audit; do not publish private findings to Witch Dog.
+Public threat feeds are data. They cannot change the agent's tool permissions.
 
-## Website/URL testing trust boundary
+The operator approves the target and scope. A URL alone does not grant authority.
 
-`web_prompt.md` is the separate webapp entry point, sharing the same approval/evidence architecture. `tools/web_baseline.py` makes at most one request to the authorized origin root using pinned DNS, validated TLS and no redirects. It observes selected headers/cookie flags without reading response bodies, and never performs active DAST. Observations are `REMOTE_OBSERVED`, **not** `LIVE_VERIFIED`: a CDN/WAF response is not evidence of the origin's build or security. Authenticated UAT and invasive VAPT require separately approved test identities, scope, safety limits and rollback. See the VAPT checklist and generalized pilot learnings.
+The scanner must use an unprivileged identity. It must not receive production secrets.
 
-## Agentic VAPT (experimental)
+The model receives only approved, minimized evidence. OpenCode permissions are not an OS sandbox.
 
-The website baseline is now Stage 0 of an expanded, **authorized, synthetic staging-only** VAPT capability. The agent reads a private engagement, plans deterministic checks, delegates real passive/active dynamic vulnerability testing to an installed OWASP ZAP Automation Framework runner, applies synthetic-user GET authorization matrices, reviews authorized source and proposes fixes. `tools/vapt.py` validates scope, generates ZAP YAML and private evidence hashes; `tools/vapt_authz.py` tests status policy only; `tools/vapt_report.py` assembles a conservative coverage/evidence summary. No VAPT claim can bypass explicit stage evidence.
+Source changes need a separate approved branch and a review pull request.
 
-**Important boundaries:** (1) JSON owner attestations are not independent real-world network enforcement, (2) ZAP activeScan can cause persistent mutations and may probe URLs found during discovery, (3) ZAP in-scope regexes are not a network firewall, (4) raw ZAP HTTP content can be sensitive and is not sent to remote LLMs, (5) synthetic fixture testing does not prove business logic or real-tenant isolation across the entire app. A hardened disposable runner and verified egress policy are separate infrastructure work, not currently created automatically by Witch Dog.
+## Evidence classes
 
-[Read the VAPT execution manual](vapt-execution.md).
+| Class | Meaning |
+|---|---|
+| SOURCE_DECLARED | The repository defines a value. |
+| HOST_OBSERVED | A local tool checked a host value. |
+| REMOTE_OBSERVED | A tool observed a remote response. |
+| LIVE_VERIFIED | Authorized evidence identifies the running artifact. |
+| UNKNOWN | The test lacks enough evidence. |
+| CONFLICTING | Two evidence sources disagree. |
 
-## Suggested expansion
+A patched source file is not proof of a patched running service.
 
-Phase 1: deterministic discovery + public-feed updates + one prompt (shipped bootstrap).
-Phase 2: SBOM scanners (Syft/Trivy/OSV), verified deployed runtime evidence, source-code SAST, local secure evidence store.
-Phase 3: optional hardened OpenCode research CI using sanitized feed deltas and no write token; independent validation; reviewed PR.
-Phase 4: preflight-gated disposable VM execution and tenant-specific PRs, secure escrow for artifacts, enforced cleanup.
-Phase 5: multi-client management, controls dashboard, monitored drift and independently verified remediation.
+## Agent workflow
 
-## Threats explicitly addressed
+The planner selects work from the approved scope.
 
-Prompt injection via vendor RSS, malicious dependency install scripts, infected Git hooks/branches, shell injection from file names, accidental publication of credentials, recursive scanning outside scope, public GitHub runner exposure, model hallucination of deployed state, false PASS on missing evidence, and a remediation bot reintroducing a vulnerable state.
+The collector runs deterministic tests.
 
-Read [PROMPT.md](../PROMPT.md) and [checklist](../checklists/security-v1.md) for execution rules.
+The investigator studies findings and forms hypotheses.
 
-## Portable PR reviewer architecture
+The verifier tests a hypothesis with separate evidence.
 
-A composite GitHub Action at action.yml and the local VM scripts in examples/witchdog-local.* invoke one portable tools/pr_review.py engine. It computes bounded Git changed-line evidence, flags deterministic security candidates, and optionally passes sanitized data to a separate OpenCode process with deny-all V2 tool permissions. Latest reviewed checklist Markdown is retrieved by tools/pr_policy.py using a trusted source commit SHA, while executable code remains pinned to the Action/ref reviewed by the operator. The reviewer is intentionally not a privileged automation agent: tools/pr_publish.py is the only step receiving a GitHub write token and it validates the PR head/current state. GitHub Action fork PRs are skipped by default; local VM users must isolate PR source and keep production credentials absent. Full details at docs/pr-review.md.
+The reporter records coverage, risks, and pending work.
+
+The planner records what tests remain. It does not run them.
+
+See [ARTEX design research](artex-research.md).
+
+## Coverage
+
+Use tools/agent_plan.py to create an offline test plan.
+
+Record each tested surface and risk area in the coverage ledger.
+
+A finding needs evidence. A negative test result also needs evidence.
+
+Keep all untested controls visible.
+
+## Web VAPT
+
+Use web_prompt.md for web application tests.
+
+The baseline mode checks one permitted response.
+
+The advanced mode can use an approved ZAP plan and synthetic test accounts.
+
+A nonzero ZAP precheck must stop execution.
+
+External reports without a runner receipt remain unverified.
+
+See [the VAPT guide](vapt-execution.md).
+
+## Pull request review
+
+GitHub Actions and local CI use the same review engine.
+
+Pinned executable code may read newer public checklists as data.
+
+The model cannot publish a review comment directly.
+
+A separate publisher checks the current PR commit before it writes.
+
+See [the PR review guide](pr-review.md).
+
+## Intelligence
+
+The public CI pipeline reads approved feeds.
+
+It validates the source data before it proposes a PR.
+
+The local schedule monitor checks that GitHub created recent schedule runs.
+
+See [intelligence operations](intelligence-operations.md).
+
+## Future work
+
+- Connect test intents to verified assets and evidence.
+- Add an agent budget for tokens, time, and requests.
+- Add tested defensive detection rules.
+- Qualify real ZAP integration on isolated synthetic targets.
+- Measure false positives, missed findings, and retest quality.

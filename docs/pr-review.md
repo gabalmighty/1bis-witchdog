@@ -6,7 +6,7 @@ A portable security review engine, with two adapters: one composite GitHub Actio
 
 Inside the target repository create .github/workflows/witchdog-review.yml using the sample at examples/witchdog-github-review.yml. It contains a single reusable Action reference:
 
-    uses: gabalmighty/1bis-witchdog@7e9bef9f1d6e354a620555f159a0fb03e4cd7e74
+    uses: gabalmighty/witchdog@f4dff91185e3e04eb79c693769e5f20f13bcf2f6
 
 The sample pins a reviewed 40-character commit SHA. Keep executable code pinned to an approved Witch Dog release/commit; update that pin only through a reviewed PR. Newer checklist data can continue to refresh from the latest audited main revision without updating scripts.
 

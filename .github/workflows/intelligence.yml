@@ -2,9 +2,18 @@ name: Witch Dog public threat intelligence
 
 on:
   schedule:
-    # 08:23 and 20:23 Asia/Manila; schedules are UTC and not guaranteed exact
-    - cron: "23 0,12 * * *"
+    # UTC. Target: 08:31 and 20:31 in Asia/Manila.
+    # GitHub can delay or skip scheduled events.
+    - cron: "31 0,12 * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/intelligence.yml"
+      - "tools/intel_sync.py"
+      - "tools/validate_intel.py"
+      - "tools/intel_health.py"
+      - "tests/test_intel_health.py"
 
 concurrency:
   group: witchdog-public-intel
@@ -33,6 +42,9 @@ jobs:
         run: python tools/intel_sync.py --out data/intel/latest.json
       - name: Enforce strict schema
         run: python tools/validate_intel.py --file data/intel/latest.json
+      - name: Show validated feed summary
+        run: |
+          python -c "import json; p=json.load(open('data/intel/latest.json', encoding='utf-8')); print('Advisories:', len(p['advisories'])); print('Sources:', len(p['sources']))"
       - name: Save public JSON only
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
