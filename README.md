@@ -76,6 +76,8 @@ A free OpenCode model is optional. Confirm the model's data policy before you se
 
 Witch Dog reads approved public feeds, including Cloudflare Zero Wire and CISA KEV.
 
+The collector retains the complete CISA KEV catalog within a strict safety limit. The data update needs a reviewed PR.
+
 GitHub Actions checks the feeds twice each day. New data goes into a review pull request.
 
 The planned times are 08:31 and 20:31 in Asia/Manila.
@@ -99,6 +101,12 @@ The planner does not send requests or run tools. It names required tests and blo
 The coverage ledger requires evidence before it records a finding or a negative test result.
 
 [Read the ARTEX research](docs/artex-research.md) and [writing rules](docs/writing-standard.md).
+
+## Development roadmap
+
+We track security features and test work in [the priority roadmap](docs/development-priorities.md).
+
+Use [compact work orders](docs/agent-work-orders.md) for independent coding-agent sessions.
 
 ## Feed the Witch Dog
 

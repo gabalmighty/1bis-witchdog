@@ -19,7 +19,8 @@ CISA_KEV = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulne
 CISA_KEV_MIRROR = "https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json"
 ALLOWED_URLS = {ZERO_WIRE, ZERO_WIRE_LEGACY, CISA_KEV, CISA_KEV_MIRROR}
 MAX_DOWNLOAD = 8_000_000
-MAX_ITEMS = 75
+MAX_ITEMS = 75  # Bound the short Zero Wire news feed.
+MAX_KEV_ITEMS = 6000  # Keep the complete official KEV list; fail if this cap is exceeded.
 
 def clean(value, limit=250):
     text = re.sub(r"<[^>]*>", " ", html.unescape(str(value or "")))
@@ -116,22 +117,29 @@ def parse_kev(raw):
     data = json.loads(raw.decode("utf-8"))
     if not isinstance(data, dict) or not isinstance(data.get("vulnerabilities"), list):
         raise ValueError("CISA KEV response failed schema check")
+    if len(data["vulnerabilities"]) > MAX_KEV_ITEMS:
+        raise ValueError("CISA KEV entries exceed the complete-catalog safety limit")
     items = []
     for row in data["vulnerabilities"]:
         if not isinstance(row, dict):
-            continue
-        cve = str(row.get("cveID", ""))
-        if not re.fullmatch(r"CVE-\d{4}-\d{4,}", cve):
-            continue
+            raise ValueError("Malformed CISA KEV entry; refuse partial catalog")
+        cve = row.get("cveID", "")
+        if not isinstance(cve, str) or not re.fullmatch(r"CVE-\d{4}-\d{4,}", cve):
+            raise ValueError("Invalid CISA KEV CVE ID; refuse partial catalog")
         items.append({"id": "cisa-kev:" + cve, "source": "cisa-kev", "cve": cve,
                       "title": clean(row.get("vulnerabilityName", ""), 180),
                       "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
                       "published": clean(row.get("dateAdded", ""), 40),
+                      "due_date": clean(row.get("dueDate", ""), 20),
+                      "vendor": clean(row.get("vendorProject", ""), 120),
+                      "product": clean(row.get("product", ""), 120),
+                      "required_action": clean(row.get("requiredAction", ""), 220),
                       "summary": clean(row.get("shortDescription", ""), 220),
                       "source_kind": "KNOWN_EXPLOITED"})
     if not items:
         raise ValueError("CISA KEV response returned no CVEs")
-    return sorted(items, key=lambda x: (x["published"], x["id"]), reverse=True)[:MAX_ITEMS]
+    # Never silently truncate KEV. Older exploited CVEs still matter for assets.
+    return sorted(items, key=lambda x: (x["published"], x["id"]), reverse=True)
 
 def build(zero_wire, kev):
     all_items = parse_zero_wire(zero_wire) + parse_kev(kev)
@@ -143,6 +151,9 @@ def sync(output):
     z = fetch_zero_wire()
     k = fetch_kev()
     result = build(z, k)
+    kev_count = sum(x["source"] == "cisa-kev" for x in result["advisories"])
+    if kev_count > MAX_KEV_ITEMS:
+        raise ValueError("CISA KEV entry count exceeds allowed limit")
     if output.exists():
         try:
             existing = json.loads(output.read_text("utf-8"))
@@ -157,7 +168,8 @@ def sync(output):
     tmp = output.with_suffix(".tmp")
     tmp.write_text(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     tmp.replace(output)
-    print("Updated %s with %d distinct public advisories" % (output, len(result["advisories"])))
+    print("Updated %s with %d distinct public advisories (%d CISA KEV)" %
+          (output, len(result["advisories"]), kev_count))
     return 0
 
 def main():

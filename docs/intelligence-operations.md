@@ -46,6 +46,22 @@ It does not update this runbook or merge data without review.
 
 Use GitHub Actions for live run status. Update this document when the workflow design changes.
 
+## Full CISA KEV coverage
+
+The first snapshot retained only the latest 75 CISA entries.
+
+The updated collector preserves all official KEV records within its bounded catalog limit.
+
+Each record includes the CVE ID, vendor, product, date added and due date.
+
+The validator rejects duplicate IDs, invalid source URLs and excessive catalog size.
+
+A catalog above the safety limit causes a HOLD. The tool does not silently truncate entries.
+
+A fresh feed can create a larger data-only review PR. Check its schema and source before merging.
+
+The published catalog is still advisory data. It does not prove that a scanned asset is affected.
+
 ## Schedule
 
 | UTC | Asia/Manila |
