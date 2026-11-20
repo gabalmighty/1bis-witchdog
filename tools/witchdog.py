@@ -11,7 +11,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 SKIP = {".git", ".witchdog", "node_modules", ".venv", "venv", ".next",
         "__pycache__", "dist", "build", "vendor", "target", ".terraform"}
 SECRET = re.compile(r"(^|/)(\.env(?:\.[^/]*)?|\.npmrc|id_rsa|id_ed25519|[^/]*\.(?:pem|p12|pfx|key))$", re.I)
@@ -106,7 +106,8 @@ def inspect(repo, root):
         for p in sensitive[:15]:
             finding(out, "E01", "FAIL", p, "Tracked secret-like file name; value NOT read")
         if not sensitive:
-            finding(out, "E01", "PASS", "git ls-files", "No secret-like filenames in inspected Git index; history and contents NOT assessed")
+            finding(out, "E01", "UNKNOWN", "git ls-files",
+                    "No secret-like tracked paths; contents, history, branch heads and CI artifacts NOT assessed")
     package_files = [p for p in files if p.endswith("package.json") and
                      len(Path(p).parts) <= 5 and "node_modules" not in p]
     if not package_files and (repo / "package.json").exists():
@@ -144,10 +145,30 @@ def inspect(repo, root):
             raw = small(repo / p)
             if raw:
                 for n, line in enumerate(raw.splitlines(), 1):
-                    if re.search(r"^\s*FROM\s+(?:\S+/)?nginx[:@]", line, re.I):
-                        status = "PASS" if "@sha256:" in line.lower() else "WARN"
-                        finding(out, "F06", status, p + ":" + str(n),
-                                "Dockerfile image declaration only; running image UNKNOWN")
+                    match = re.match(r"^\s*FROM\s+(.+?)(?:\s+#.*)?$", line, re.I)
+                    if not match:
+                        continue
+                    parts = match.group(1).split()
+                    i = 0
+                    while i < len(parts) and parts[i].startswith("--"):
+                        if parts[i].lower() == "--platform":
+                            i += 2
+                        else:
+                            i += 1
+                    image = parts[i] if i < len(parts) else ""
+                    if not image or "$" in image or image.startswith("--"):
+                        status, reason = ("UNKNOWN",
+                            "Dynamic/invalid Docker base image; resolved digest and running image UNKNOWN")
+                    elif image.lower() == "scratch":
+                        status, reason = ("N/A",
+                            "Docker scratch base has no registry digest; running image UNKNOWN")
+                    elif re.search(r"@sha256:[a-f0-9]{64}$", image, re.I):
+                        status, reason = ("PASS",
+                            "Image reference has a SHA-256 digest; source declaration only; running image UNKNOWN")
+                    else:
+                        status, reason = ("WARN",
+                            "Base image lacks a valid SHA-256 digest; source declaration only; running image UNKNOWN")
+                    finding(out, "F06", status, p + ":" + str(n), reason)
     if ".gitmodules" in files:
         finding(out, "F01", "WARN", ".gitmodules", "Verify gitlink, tracked branch and built artifact alignment")
     finding(out, "A03", "UNKNOWN", "source vs deployed runtime",

@@ -16,6 +16,10 @@ Run as an unprivileged user. Keep the scan output in private storage.
 
 The baseline scanner does not change source files or scan remote hosts.
 
+Dockerfile F06 checks each declared base image. A pinned digest is only source evidence.
+
+An E01 filename check is not a content or history secret scan. It must remain UNKNOWN until a trusted scanner verifies those surfaces.
+
 ## Intelligence schedule
 
 The GitHub workflow uses two UTC cron events each day.

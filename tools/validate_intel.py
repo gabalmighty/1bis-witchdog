@@ -7,14 +7,20 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
+MAX_FILE_BYTES = 8_000_000
+MAX_ADVISORIES = 6075  # Up to 6000 CISA KEV and 75 Cloudflare news items.
+
 def validate(path):
-    if path.stat().st_size > 300000:
+    if path.stat().st_size > MAX_FILE_BYTES:
         raise ValueError("File too large")
     obj = json.loads(path.read_text(encoding="utf-8"))
     rows = obj.get("advisories")
-    if obj.get("schema_version") != 1 or not isinstance(rows, list) or len(rows) > 150:
+    if obj.get("schema_version") != 1 or not isinstance(rows, list) or len(rows) > MAX_ADVISORIES:
         raise ValueError("Invalid schema")
-    if not isinstance(obj.get("sources"), list) or len(obj["sources"]) != 2:
+    if obj.get("sources") != [
+        "https://radar.cloudflare.com/zero-wire/feed",
+        "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
+    ]:
         raise ValueError("Invalid sources")
     ids = set()
     for item in rows:
@@ -35,8 +41,21 @@ def validate(path):
             "radar.cloudflare.com", "blog.cloudflare.com", "www.cisa.gov"
         ):
             raise ValueError("Unallowlisted URL")
-        if item["source"] == "cisa-kev" and not re.fullmatch(r"CVE-\d{4}-\d{4,}", item.get("cve", "")):
-            raise ValueError("Invalid CVE")
+        if item["source"] == "cisa-kev":
+            cve = item.get("cve", "")
+            if (not isinstance(cve, str) or
+                    not re.fullmatch(r"CVE-\d{4}-\d{4,}", cve) or
+                    id_ != "cisa-kev:" + cve):
+                raise ValueError("Invalid CVE or ID binding")
+            for field, max_length in (("vendor", 120), ("product", 120),
+                                      ("required_action", 220), ("due_date", 20)):
+                val = item.get(field, "")
+                if not isinstance(val, str) or len(val) > max_length:
+                    raise ValueError("Invalid KEV metadata: " + field)
+            for field in ("published", "due_date"):
+                val = item.get(field, "")
+                if val and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", val):
+                    raise ValueError("Invalid KEV date: " + field)
     return len(rows)
 
 if __name__ == "__main__":
