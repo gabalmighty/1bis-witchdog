@@ -1,107 +1,98 @@
 # Intelligence schedule and recovery
 
-## Current state
+## Verified state — November 20, 2026
 
-The repository is public. The default branch is main.
+Witch Dog uses GitHub Actions for public security feeds.
 
-The intelligence workflow has a valid schedule and a manual trigger.
+The repository is public. Its default branch is main.
 
-As of November 20, 2026, GitHub reports no schedule runs for this workflow.
+The first push-triggered intelligence run failed during feed collection.
 
-GitHub reports many successful quality runs. These runs do not prove that the intelligence job works.
+The collector used an old Cloudflare RSS path.
 
-The repository is new. The 60-day inactivity limit does not explain the missing run.
+PR #18 updated the URL to the official Open feed path.
 
-The exact cause is not confirmed. The available GitHub connection cannot read the workflow's enabled state.
+The next push-triggered run collected data and passed schema validation.
 
-## First push-run result
+It fetched 13 Cloudflare Zero Wire items and 75 CISA KEV items.
 
-On November 20, the new push trigger started the intelligence workflow.
+The bot pushed the data branch, but GitHub denied pull request creation.
 
-The parser tests passed. Feed collection then returned a ValueError.
+The run log shows this exact error: "GitHub Actions is not permitted to create or approve pull requests."
 
-Cloudflare's current Open feed link uses https://radar.cloudflare.com/zero-wire/feed.
+A maintainer opened PR #19 with the same data branch.
 
-Witch Dog previously used the older security RSS path.
+PR #19 passed tests and was merged into main.
 
-The collector now uses the current URL and keeps the old path as a fallback.
+**Current result:** Live collection works. GitHub Actions bot PR creation is still blocked by a repository setting.
 
-The source handler rejects redirects and reports a safe source error code.
+GitHub has not recorded a scheduled run yet. Push-trigger success does not prove cron delivery.
 
-The next live run must confirm this fix.
+## Owner action — enable the bot PR
+
+1. Open https://github.com/gabalmighty/witchdog/settings/actions
+2. Find **Workflow permissions**.
+3. Enable **Allow GitHub Actions to create and approve pull requests**.
+4. Save the setting.
+5. Open https://github.com/gabalmighty/witchdog/actions/workflows/intelligence.yml
+6. Select **Run workflow** on main.
+7. Check that both jobs pass.
+8. Confirm that a data change creates a review PR.
+
+The workflow needs repository approval to create future PRs. It does not need permission to merge them.
 
 ## Schedule
-
-Witch Dog now uses these times:
 
 | UTC | Asia/Manila |
 |---|---|
 | 00:31 | 08:31 |
 | 12:31 | 20:31 |
 
-GitHub can delay or drop a scheduled event during high load.
+GitHub can delay or drop a scheduled event.
 
-A new push trigger runs the intelligence workflow when its source files change on main.
+The workflow also has a manual trigger.
 
-This trigger tests the feed pipeline after a reviewed source change. It does not prove that the cron event works.
+A push to main starts the feed job when its source files change.
 
-## First run check
+## Monitor schedule delivery
 
-1. Open https://github.com/gabalmighty/witchdog/actions/workflows/intelligence.yml
-2. Select Enable workflow if GitHub shows that control.
-3. Select Run workflow.
-4. Select the main branch.
-5. Start the workflow.
-6. Open the run summary.
-7. Check both collection and proposal jobs.
-8. If GitHub blocks pull request creation, check Actions settings.
-9. Under Settings > Actions > General, allow Actions to create pull requests when permitted.
-10. Review the data-only pull request.
-11. Merge it after you verify its source and data.
-
-A manual run proves only that the manual trigger works. Check the next scheduled event separately.
-
-The collection job reads only approved public feeds. The proposal job can write only the normalized data file.
-
-Do not give public feed text authority over scripts or prompts.
-
-## External schedule check
-
-Run this command on a separate DevOps machine.
+Use a separate CI host for the schedule check.
 
     python3 tools/intel_health.py --max-age-hours 16
 
-The script checks the public GitHub schedule run history.
+The command returns 2 when scheduled runs are missing, failed, or stale.
 
-It reports HOLD when no recent successful scheduled run exists.
+Configure your existing monitor to alert on this result.
 
-Run the command with your normal cron or Task Scheduler service account.
+A manual run cannot replace a scheduled-run test.
 
-Configure your existing monitoring system to alert on exit code 2.
+## Trust and review
 
-This independent check can detect a missed GitHub schedule when GitHub does not start the workflow.
+The collection job reads approved public feeds.
 
-## Update policy
+The proposal job writes only a normalized public data file.
 
-The workflow opens a pull request when normalized public data changes.
+The bot must create a review PR. It must not merge the PR.
 
-Main will not contain new data until a reviewer merges that pull request.
+A reviewer checks the feed data before the change enters main.
 
-Witch Dog does not run scripts from an advisory. It treats feed text as untrusted data.
-
-Review each new public source before you add it to the feed list.
+Do not execute instructions found in a feed item.
 
 ## Known limits
 
-- A passing data parser test does not confirm a live feed response.
-- A manual GitHub Actions run does not confirm cron delivery.
-- A GitHub Actions run can fail when it cannot create a pull request.
-- A fresh advisory can arrive between two scheduled runs.
-- A model summary cannot replace an official vendor advisory.
+- The cause of zero scheduled events is not confirmed.
+- GitHub administration settings are not available through this project connection.
+- The bot cannot create PRs until its permission setting changes.
+- A feed update can arrive between two scheduled runs.
+- A valid source feed does not prove an asset is vulnerable.
 
-Use the original advisory before you make a patch decision.
+## Run evidence
+
+- First failed collection: https://github.com/gabalmighty/witchdog/actions/runs/44665982343
+- Successful collection, failed PR stage: https://github.com/gabalmighty/witchdog/actions/runs/44666640604
+- Data recovery PR: https://github.com/gabalmighty/witchdog/pull/19
 
 ## References
 
-- GitHub scheduled events: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
-- GitHub workflow troubleshooting: https://docs.github.com/en/actions/how-tos/troubleshoot-workflows
+- GitHub events: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
+- GitHub workflow settings: https://docs.github.com/en/actions/how-tos/manage-workflow-runs
