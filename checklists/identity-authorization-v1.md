@@ -51,7 +51,7 @@ This is a **platform-agnostic investigation and test-design catalog**, derived f
 For each control, the security agent should produce:
 
 1. **Actual source evidence** (method, route, middleware, service call, expected role, tenant scope, file/line), distinguishing observed code from assumptions.
-2. **Positive test** for a legitimate synthetic role/tenant and **negative test** for anonymous, lesser role, other tenant, deleted/demoted account and alternate endpoint as relevant.
+2. Use a positive test for a valid synthetic role and tenant. Use negative tests for anonymous, lower-role, other-tenant, revoked and alternate-route cases.
 3. **Risk and exploit prerequisites** separately: source bug, relevant user capability, reachable deployed route, live proof (if authorized), and business impact.
 4. **Remediation suggestion** based on centrally enforced policy with object/tenant check in service/data access layer. Use short-lived scoped tokens and key custody where relevant.
 5. **Retest and closure gate**: source PR alone = `SOURCE_PATCHED`, only independent authorized deployed behavior test = `REMEDIATED_VERIFIED`. Legacy/alternate path coverage remains open until measured.

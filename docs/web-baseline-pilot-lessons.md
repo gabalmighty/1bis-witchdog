@@ -22,14 +22,14 @@ The reports were generated in different amounts of AI processing time. Both were
 ## False confidence to prevent
 
 1. **No Critical finding detected** from one GET does not mean that none exists. Historical unresolved findings are carried forward separately and cannot be superseded by a later header-only result.
-2. **CSP present** does not mean scripts are constrained: `img-src` only, an empty policy, a broad `script-src *`, `https:`, `data:`, `'unsafe-inline'` or `'unsafe-eval'` require review. Even a structurally strong CSP does not prove XSS absence.
+2. **CSP present** does not prove that scripts have safe limits. Review broad script sources and unsafe directives. A strong CSP does not prove that XSS is absent.
 3. **X-Frame-Options present** does not mean clickjacking is mitigated: `ALLOW-FROM` is obsolete; `frame-ancestors *` is broad.
 4. **Header value matters:** `notnosniff` is not `nosniff`, and `Referrer-Policy: unsafe-url` may increase leakage compared with the modern browser default.
 5. **Permissions-Policy** is not a blanket security score. It needs app-specific purpose and denies or scoped grants for powerful browser features.
-6. **TLS 1.3 negotiated** proves only one successful TLS negotiation, not that deprecated versions/ciphers are disabled. Missing HSTS does not establish a reachable HTTP-only endpoint or that an attacker could strip the initial connection; review redirects and preload separately.
-7. **Source and live edge may differ:** protections recorded in API middleware may not appear on the SPA root served by a separate reverse proxy/CDN. Mark `CONFLICTING` and require per-route deployed evidence.
+6. **TLS 1.3 negotiated** proves one successful TLS connection. It does not prove that old protocols are disabled. Missing HSTS does not prove an HTTP endpoint is reachable. Check redirects and preload separately.
+7. **Source and live edge may differ.** The API can send headers that the SPA proxy does not send. Record CONFLICTING until each deployed route is verified.
 8. **Schema validated** shows only a bounded report structure; it does not prove findings accurate or comprehensive.
-9. **HTTP 401/403/429/503** can be a reverse proxy/WAF/auth response; it is a WARN / visibility gap, not a successful application security assessment.
+9. **HTTP 401/403/429/503** can come from a proxy, WAF or authentication layer. Mark WARN and record the coverage gap.
 10. **Nothing retrieved beyond the authorized root** implies all other route-specific protections, API access, session controls and business flows are UNKNOWN.
 
 ## Engineering changes

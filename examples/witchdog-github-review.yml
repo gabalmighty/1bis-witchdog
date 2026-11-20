@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 18
     steps:
       - name: Witch Dog security reviewer
-        uses: gabalmighty/1bis-witchdog@7e9bef9f1d6e354a620555f159a0fb03e4cd7e74 # reviewed implementation
+        uses: gabalmighty/witchdog@f4dff91185e3e04eb79c693769e5f20f13bcf2f6 # reviewed implementation
         with:
           enable-ai: 'false' # enable after provider privacy approval
           approve-code-sharing: 'false' # set true only with client/public code approval

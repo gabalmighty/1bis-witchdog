@@ -36,6 +36,12 @@ jobs:
           python tools/vapt.py --help
           python tools/vapt_authz.py --help
           python tools/vapt_report.py --help
+      - name: Check public writing guidance
+        run: python tools/check_docs_style.py --all
+      - name: Check agent planner without network
+        run: python tools/agent_plan.py --help
+      - name: Check intelligence watchdog
+        run: python tools/intel_health.py --help
       - name: Validate initial public data
         run: python tools/validate_intel.py --file data/intel/latest.json
 

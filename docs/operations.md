@@ -1,36 +1,80 @@
-# Operations: local runs, scheduled intelligence, and safe updates
+# Witch Dog operations
 
-## Local workstation / application VM
+## Local scans
 
-Clone alongside target repos, then run the universal prompt in the README. To avoid AI provider dependencies, run:
+Clone Witch Dog beside the target repositories.
 
-- Linux/macOS: `python3 tools/witchdog.py scan --root .. --output .witchdog/runs`
-- Windows PowerShell: `py -3 tools/witchdog.py scan --root .. --output .witchdog/runs`
+Linux:
 
-Explicitly pass `--root`; output is local, normally `.witchdog/runs/`. The OpenCode Witch Dog agent allows only these three exact baseline shell commands without a separate approval; other shell operations still require approval. This is an agent UX setting, NOT an operating-system security boundary. No repo editing or remote scanning occurs in the Python scanner. Protect output and avoid publishing it in a public issue/PR.
+    python3 tools/witchdog.py scan --root .. --output .witchdog/runs
 
-## Scheduling
+Windows:
 
-- **Security intelligence:** GitHub workflow `intelligence.yml`, twice per day, deterministic ingest into a reviewed PR. Needs Actions enabled and repository Settings → Actions → General allowing Actions to create PRs (if GitHub token settings require it). Workflow never auto-merges.
-- **Local application audit:** schedule a pinned, trusted Witch Dog version with a low-privilege user using Windows Task Scheduler or systemd timers/cron. Use `python ... scan` for unattended runs; do not run OpenCode headless with broad filesystem/shell permissions on production.
-- **Updating instructions:** use a reviewed immutable release tag / checked commit; `git pull` alone on a privileged production task is a supply-chain risk. Fetch/review in a separate directory, verify signature/hash and then promote. Pin executable code, not necessarily intel data.
-- **On-call:** treat urgent advisories as event-triggered, not next-midnight-only. Missing feeds or unauthorized collector access should alert, not mark assets safe.
+    py -3 tools/witchdog.py scan --root .. --output .witchdog/runs
 
-## GitHub workflow safety
+Run as an unprivileged user. Keep the scan output in private storage.
 
-Scheduled workflows run on the default branch, may be delayed, and public-repo schedules may be disabled after 60 days inactivity. GitHub-hosted runners for public repositories are usually free, but are subject to usage limits/policy. Keep source feeds allowlisted, response size limited and outputs normalized.
+The baseline scanner does not change source files or scan remote hosts.
 
-Never combine untrusted PR checkout, a powerful GitHub write token and an agent allowed to run shell commands. AI-generated changes must be treated as proposals and independently verified. Prefer a separate, read-only AI research workflow with artifact-only output until a security review approves the PR promotion flow.
+## Intelligence schedule
 
-## Suggested rollout tests
+The GitHub workflow uses two UTC cron events each day.
 
-1. One developer Windows laptop auditing two synthetic repos (including a deliberately tracked fake `.env` file).
-2. One Linux VM without Docker/Kubernetes credentials; verify that runtime checks show `UNKNOWN`.
-3. Multi-repo Git checkout with a nested submodule, malformed package.json and symlinks; no traversal or crash.
-4. Unavailable RSS or malformed KEV input: workflow fails and preserves last known-good data.
-5. Public PR review: inspect that no private path, hostname, .env value or customer address appears.
-6. Simulated advisories for Vite and NGINX: verify source-only vs live verdict separation.
+The planned times are 08:31 and 20:31 in Asia/Manila.
 
-## Public CISA KEV feed resilience
+The workflow also accepts a manual trigger.
 
-If the official cisa.gov JSON endpoint returns HTTP 403 or another transport error, the collector retries using [CISA's official `cisagov/kev-data` mirror](https://github.com/cisagov/kev-data) (develop branch). Both URLs are exact-allowlisted. An invalid JSON/schema fails the run; no arbitrary redirect or third-party proxy is trusted. The system does not update the maintained intelligence snapshot on a failed run.
+A push to main starts the feed pipeline when a tracked intelligence source changes.
+
+The workflow proposes a data-only pull request. It does not merge the request.
+
+See [intelligence operations](intelligence-operations.md) for the first-run check.
+
+## Watch for missed runs
+
+Use a separate CI machine to check the GitHub schedule.
+
+    python3 tools/intel_health.py --max-age-hours 16
+
+Configure the CI monitor to alert when the command returns code 2.
+
+A missing scheduled run is a failure. Do not infer feed freshness from an old data file.
+
+## Update Witch Dog
+
+Use a reviewed release or exact commit on production hosts.
+
+Do not run a privileged unattended task that pulls and executes new main code.
+
+Download and test new code in a separate directory.
+
+Move the reviewed version into the production job after approval.
+
+## Protect CI
+
+Do not combine a GitHub write token with untrusted PR execution.
+
+Run source review, CI tests, and comment publication in separate stages.
+
+Keep secrets away from the model worker.
+
+Use read-only Git access for source inspection.
+
+## CISA KEV fallback
+
+The collector reads the official CISA feed first.
+
+If the primary request fails, it can use CISA's public GitHub data mirror.
+
+Both sources have exact allowed URLs.
+
+An invalid feed holds the run. Witch Dog keeps the last known-good data file.
+
+## Checks before rollout
+
+- Test an offline VM and a Windows laptop.
+- Test a folder with several Git repositories.
+- Test invalid RSS and CISA JSON fixtures.
+- Test missing access and stale evidence.
+- Test the workflow on a public data-only change.
+- Verify that no client data appears in the public repository.

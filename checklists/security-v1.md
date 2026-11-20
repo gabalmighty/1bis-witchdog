@@ -2,7 +2,7 @@
 
 **Applies to:** repositories, Windows/Linux/macOS hosts, VMs, containers, private and public deployments **only where authorized**. The baseline script implements only a **subset**; unexecuted controls are UNKNOWN, never implicitly PASS.
 
-**Every record includes:** control_id; authorized asset; observation level (`HOST_OBSERVED`, `SOURCE_DECLARED`, `LIVE_VERIFIED`); time UTC; scanner/tool version; evidence path or redacted reference; actual result (`PASS`/`FAIL`/`WARN`/`UNKNOWN`/`N/A`); confidence; limitations; approval/fix state.
+**Every record includes:** control ID, approved asset, evidence class, time and tool version. Record the evidence path, test result, confidence, limits and approval state.
 
 **Run classes:** daily passive, deployment gate, weekly deep review, controlled UAT, incident only. No intrusive production tests without separate authorization.
 

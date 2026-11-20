@@ -34,7 +34,7 @@ For every control, track `test_status=EXECUTED/DEFERRED/BLOCKED/NOT_APPLICABLE`,
 
 The BASELINE runs a single authorized GET of `/`, usually covering around ten header/TLS controls, not a meaningful sample of the full VAPT catalog. Good scores or zero High findings reflect **limited tests**, not secure authentication or authorization. Reports MUST label `NOT_A_VAPT`, retain high-impact `UNKNOWN` controls and preserve unresolved independent audit findings in the **private** client register. A 200 landing page is availability evidence, not a secure application conclusion. Compare source vs CDN/SPA/API and running release before reconciling contradictory header evidence. Do not claim TLS minimum supported version from a single TLSv1.3 negotiation.
 
-Header presence alone is insufficient for narrow PASS: inspect effective script restriction under CSP, valid `frame-ancestors` or X-Frame-Options, exact `nosniff`, actual Referrer-Policy directive and sensitive Permissions-Policy grants. The absence of Referrer-Policy is not necessarily an active leak because of modern browser defaults; missing Permissions-Policy is a context-dependent hardening observation. See [pilot lessons](../docs/web-baseline-pilot-lessons.md).
+Header presence is not enough for PASS. Check the CSP script rules, framing limits, nosniff value, Referrer-Policy and Permissions-Policy. Browser defaults can reduce the impact of absent referrer rules. See [pilot lessons](../docs/web-baseline-pilot-lessons.md).
 
 ## WEB-00 — Engagement scope and safe execution
 
@@ -300,7 +300,7 @@ This checklist now supports an **engagement-scoped VAPT** execution path in addi
 | Agent white box | Authorized source/route/role review | Hypotheses across WEB-03–12 and implementation context | Live runtime correctness without deployed proof |
 | Human retest | Scoped reproducibility evidence | Individual confirmed findings | Entire app safe by default |
 
-**VAPT quality gate:** valid RoE, exact scope, real test execution, meaningful route/role/test coverage, reproducible sanitized evidence, independent review of scanner candidates, prioritized remediation ownership and a deployed retest. Otherwise report `SCOPED_VAPT_PARTIAL` with deferred controls. Active tests in particular must respect synthetic data, approved exclusions, recovery snapshot and network egress limits. See [execution guidance](../docs/vapt-execution.md).
+**VAPT quality gate:** Record approval, scope, real tests, route and role coverage, evidence and independent review. Record the fix owner and deployed retest. Use SCOPED_VAPT_PARTIAL when controls remain untested. Active tests need synthetic data, network limits and restore proof.
 
 ## WEB-14 — Cross-service identity and route completeness (source/controlled UAT)
 
@@ -325,14 +325,14 @@ These controls extend WEB-03/04/07/08 for multi-app identity providers, alternat
 
 ### ZAP evidence and execution gate
 
-- An Automation Framework `-autocheck` nonzero (including exit 2) is a HOLD and **must not** be bypassed with direct `-autorun`; debug installed add-on/plan version and regenerate.
+- A nonzero -autocheck is a HOLD. Do not bypass the result with direct -autorun. Check ZAP add-ons and the plan before another run.
 - After a clean precheck, `-autorun` exit 2 can mean warnings. With a complete bounded raw report and matching runner receipt, classify `EXECUTED_WITH_WARNINGS` and require reviewer analysis, not automatic PASS.
 - Direct external tool output can still be triaged privately, but its execution provenance is `EXTERNAL_UNVERIFIED` unless independently qualified.
 - Two scanners observing one homepage do **not** establish route, role, injection or manual VAPT coverage; count unique exercised endpoints and methods, and preserve high-risk UNKNOWN.
 
 ## Default BASELINE coverage map
 
-A single request to `/` can **only** support a small, explicitly enumerated set: `WEB-00.01` as operator attestation, `WEB-01.01` DNS class, `WEB-01.03` response/redirect, `WEB-02.01` HTTPS certificate validity, `WEB-02.03`–`WEB-02.09` selected header presence, and `WEB-05.01` cookie *flag metadata*. Some checks depend on response availability.
+One root request checks only a few baseline controls. These include operator permission, DNS, HTTP response, TLS and selected headers. Cookie flags can also be checked. All other controls remain UNKNOWN.
 
 All other catalog entries must remain `UNKNOWN / NOT_RUN`, unless there is additional authorized evidence. **Never report an overall “WSTG PASS”, “ASVS L1 PASS” or “VAPT passed” based on this baseline.**
 

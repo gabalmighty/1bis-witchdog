@@ -1,9 +1,41 @@
-# Security policy
+# Witch Dog security policy
 
-Witch Dog is experimental. The scanner provides bounded evidence and cannot assert complete safety or replace EDR, incident responders, authenticated configuration audits or penetration testing.
+Witch Dog is an experimental security tool.
 
-**Report vulnerabilities privately.** Use GitHub's **Report a vulnerability** / private vulnerability reporting feature if enabled, or contact the maintainers through a pre-established private channel. Do not file public issues containing exploit details, credentials, incident logs, client names, customer IP addresses or personal data.
+It does not replace a qualified penetration test, incident response, or endpoint security software.
 
-Do not attempt intrusive probing of third-party assets. Findings about Witch Dog itself should include an isolated test case, relevant version/commit, expected and observed behavior, and no private secrets.
+## Report a security problem
 
-Before enabling scheduled jobs or remote AI providers, read [Architecture](docs/architecture.md). OpenCode permissions do not provide an OS sandbox. Keep secrets and private repositories out of public GitHub Actions jobs. Production modification always requires explicit operator authorization.
+Use GitHub private vulnerability reporting when that feature is available.
+
+Do not post an unpatched exploit in a public issue.
+
+Do not send credentials, client data, hostnames, logs, or private infrastructure records in a public report.
+
+Provide the affected Witch Dog version or commit.
+
+Give a short impact summary and a safe reproduction in an isolated test environment.
+
+## Test only approved systems
+
+Use Witch Dog only on systems that you own or have written authority to test.
+
+Active testing requires an approved scope and safe synthetic data.
+
+Do not run destructive tests or attempt credential theft.
+
+## Keep a safe execution boundary
+
+Do not use a model prompt as the only security boundary.
+
+Keep tools and credentials in an isolated, least-privileged process.
+
+Stop a scan if the plan is invalid or the target is out of scope.
+
+## Disclosure
+
+Allow maintainers to review the issue and prepare a fix before public disclosure.
+
+Use private security channels for the first report.
+
+See [contribution rules](CONTRIBUTING.md) for normal patches.

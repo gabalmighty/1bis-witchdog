@@ -185,7 +185,7 @@ def scan(root, output, max_repos):
     if not repos:
         data["coverage_gaps"].append("No git roots found in authorized scan scope")
     for path in repos:
-        if path.name != "1bis-witchdog":
+        if path.name != "witchdog":
             data["repos"].append(inspect(path, root))
     output = output.expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
