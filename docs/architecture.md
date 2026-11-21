@@ -57,6 +57,22 @@ A finding needs evidence. A negative test result also needs evidence.
 
 Keep all untested controls visible.
 
+## Developer malware detection
+
+The local source scanner calls trusted tools/developer_guard.py.
+
+The detector checks selected local paths and versioned threat reference data.
+
+It does not run source files or fetch code from target repositories.
+
+Findings are source observations or host filename observations.
+
+The model may only summarize sanitized evidence from these checks.
+
+A clean subset does not prove a safe host, process tree or remote Git branch.
+
+See [developer malware checklist](../checklists/developer-malware-v1.md).
+
 ## Web VAPT
 
 Use web_prompt.md for web application tests.

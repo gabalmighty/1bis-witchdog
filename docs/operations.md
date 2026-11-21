@@ -20,6 +20,22 @@ Dockerfile F06 checks each declared base image. A pinned digest is only source e
 
 An E01 filename check is not a content or history secret scan. It must remain UNKNOWN until a trusted scanner verifies those surfaces.
 
+## Developer malware checks
+
+The same scan runs developer loader checks M01–M09.
+
+It checks selected startup scripts, editor tasks, build configs and font-like assets.
+
+It checks exact npm package versions in local package-lock.json files.
+
+It checks known home loader filenames but does not read their contents.
+
+Remote Git branches, historical objects, running processes and persistence remain NOT_INSPECTED.
+
+If a machine is suspected to be infected, use [incident response](developer-incident-response.md).
+
+Share [the scan prompt](../scan_prompt.md) with developers.
+
 ## Intelligence schedule
 
 The GitHub workflow uses two UTC cron events each day.

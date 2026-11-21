@@ -15,6 +15,29 @@ Use the tools on an approved host, a set of Git repositories, or a test web appl
 
 The tools record findings, test scope, and missing evidence. They do not certify that a system is secure.
 
+## Scan your laptop or VM
+
+Use the [ready developer security prompt](scan_prompt.md) with your coding agent.
+
+Copy this prompt into OpenCode, Codex, or another approved coding agent:
+
+```text
+GOAL: Run a read-only Witch Dog audit of this laptop, VM, or developer workstation.
+INPUT: Read https://github.com/gabalmighty/witchdog/blob/main/scan_prompt.md and follow its GOAL, INPUT, SCOPE, STEPS, GATES, and OUTPUT.
+SCOPE: My approved local workspace and known home loader artifact names only.
+STEPS: Confirm the OS and permissions. Use a trusted Witch Dog checkout. Run deterministic local scans. Triage M01–M09 with source and host evidence. Report gaps and verified observations.
+GATES: Do not pull or execute suspect repositories. Do not install dependencies, run builds, access secret values, or change the host. If compromise is suspected, stop and escalate.
+OUTPUT: Private evidence report, risk summary, exact scope, and safe next steps. Never claim a clean host from partial checks.
+```
+
+The scanner uses Python and Git. It does not need an AI key.
+
+For a suspected active infection, use a separate trusted responder machine.
+
+Never run project startup scripts or editor auto-tasks in a suspect checkout.
+
+[Malware checks](checklists/developer-malware-v1.md) · [Incident response](docs/developer-incident-response.md)
+
 ## Quick start
 
 Install Python 3.11 or later and Git. OpenCode is optional.
@@ -107,6 +130,18 @@ The coverage ledger requires evidence before it records a finding or a negative 
 We track security features and test work in [the priority roadmap](docs/development-priorities.md).
 
 Use [compact work orders](docs/agent-work-orders.md) for independent coding-agent sessions.
+
+## Threat detections
+
+Witch Dog has reviewed rules for developer loader and supply-chain patterns.
+
+The public catalog includes 12 exact malicious npm releases reported by Sonatype.
+
+The local scanner checks selected files and known home artifact names.
+
+It does not prove that remote branches or running processes are safe.
+
+[Detection checklist](checklists/developer-malware-v1.md) · [Research](docs/developer-threat-research.md)
 
 ## Feed the Witch Dog
 
