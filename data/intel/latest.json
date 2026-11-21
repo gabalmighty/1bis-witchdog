@@ -20917,6 +20917,20 @@
       "vendor": "Qualitia"
     },
     {
+      "cve": "CVE-2025-42884",
+      "due_date": "2026-11-23",
+      "id": "cisa-kev:CVE-2025-42884",
+      "product": "NetWeaver",
+      "published": "2026-11-20",
+      "required_action": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see ",
+      "source": "cisa-kev",
+      "source_kind": "KNOWN_EXPLOITED",
+      "summary": "SAP NetWeaver Enterprise Portal contains an improper neutralization of special elements in data query logic vulnerability that allows an unauthenticated attacker to disclose or modify server information via injected JNDI",
+      "title": "SAP NetWeaver Improper Neutralization of Special Elements in Data Query Logic Vulnerability",
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "vendor": "SAP"
+    },
+    {
       "cve": "CVE-2025-42999",
       "due_date": "2025-06-05",
       "id": "cisa-kev:CVE-2025-42999",
@@ -22485,6 +22499,20 @@
       "vendor": "IBM"
     },
     {
+      "cve": "CVE-2026-123890",
+      "due_date": "2026-11-23",
+      "id": "cisa-kev:CVE-2026-123890",
+      "product": "VMware vCenter",
+      "published": "2026-11-20",
+      "required_action": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see ",
+      "source": "cisa-kev",
+      "source_kind": "KNOWN_EXPLOITED",
+      "summary": "Broadcom VMware vCenter contains an authentication bypass using an alternate path or channel vulnerability in the VMware Directory Service that allows an unauthenticated attacker with network access to vCenter to bypass ",
+      "title": "VMWare vCenter Authentication Bypass Using an Alternate Path or Channel Vulnerability",
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "vendor": "Broadcom"
+    },
+    {
       "cve": "CVE-2026-124194",
       "due_date": "2026-11-24",
       "id": "cisa-kev:CVE-2026-124194",
@@ -22539,6 +22567,20 @@
       "title": "Ivanti Endpoint Manager Mobile (EPMM) Code Injection Vulnerability",
       "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
       "vendor": "Ivanti"
+    },
+    {
+      "cve": "CVE-2026-129448",
+      "due_date": "2026-11-23",
+      "id": "cisa-kev:CVE-2026-129448",
+      "product": "Roller",
+      "published": "2026-11-20",
+      "required_action": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see ",
+      "source": "cisa-kev",
+      "source_kind": "KNOWN_EXPLOITED",
+      "summary": "Apache Roller contains a deserialization of untrusted data vulnerability that allows an unauthenticated remote attacker to execute arbitrary code via the XML-RPC endpoint, which accepts and deserializes vendor extension ",
+      "title": "Apache Roller Deserialization of Untrusted Data Vulnerability",
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "vendor": "Apache"
     },
     {
       "cve": "CVE-2026-1340",
@@ -24459,6 +24501,20 @@
       "vendor": "Cisco"
     },
     {
+      "cve": "CVE-2026-76466",
+      "due_date": "2026-11-23",
+      "id": "cisa-kev:CVE-2026-76466",
+      "product": "Expressway Series",
+      "published": "2026-11-20",
+      "required_action": "Apply mitigations in accordance with vendor instructions, ensuring compliance with CISA’s BOD 26-04 Prioritizing Security Updates Based on Risk (see URL in Notes) guidance and CISA’s “Forensics Triage Requirements” (see ",
+      "source": "cisa-kev",
+      "source_kind": "KNOWN_EXPLOITED",
+      "summary": "Cisco Expressway Series contains a use of hard-coded credentials vulnerability that allows an unauthenticated, remote attacker with persistent cookies and network access to execute commands as root on a clustered device ",
+      "title": "Cisco Expressway Series Use of Hard-coded Credentials Vulnerability",
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "vendor": "Cisco"
+    },
+    {
       "cve": "CVE-2026-76504",
       "due_date": "2026-10-03",
       "id": "cisa-kev:CVE-2026-76504",
@@ -25127,5 +25183,5 @@
     "https://radar.cloudflare.com/zero-wire/feed",
     "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
   ],
-  "updated_utc": "2026-11-20T11:41:12+00:00"
+  "updated_utc": "2026-11-21T07:38:11+00:00"
 }
