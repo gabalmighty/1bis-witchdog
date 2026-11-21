@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "id": "developer-supply-chain-2026",
+  "title": "Developer repository loader and credential theft patterns",
+  "classification": "PUBLIC_SOURCE_SUMMARY",
+  "updated_utc": "2026-11-21T00:00:00Z",
+  "assurance": "DETECTION_REFERENCE_NOT_VERIFIED_INFECTION",
+  "sources": [
+    {
+      "id": "sonatype-2026-010515",
+      "publisher": "Sonatype Research Labs",
+      "date": "2026-11-04",
+      "url": "https://www.sonatype.com/blog/polinrider-loader-reappears-in-hijacked-npm-packages",
+      "scope": "Hijacked npm releases, exact versions, loader behavior"
+    },
+    {
+      "id": "gitguardian-2026-10-27",
+      "publisher": "GitGuardian",
+      "date": "2026-10-27",
+      "url": "https://blog.gitguardian.com/ghostaction-x-polinrider/",
+      "scope": "Unauthorized Git pushes, hidden VS Code tasks, staged font loaders, persistence"
+    }
+  ],
+  "behavioral_checks": [
+    {
+      "control": "M01",
+      "category": "repository",
+      "label": "Suspicious startup script",
+      "basis": "npm lifecycle or dev/build commands execute an unusual local loader"
+    },
+    {
+      "control": "M02",
+      "category": "repository",
+      "label": "Hidden editor task",
+      "basis": "VS Code folderOpen task can execute node or concealed payloads"
+    },
+    {
+      "control": "M03",
+      "category": "repository",
+      "label": "Disguised executable asset",
+      "basis": "font-like file contains source code rather than a recognized font header"
+    },
+    {
+      "control": "M04",
+      "category": "repository",
+      "label": "Dynamic code execution",
+      "basis": "configuration decodes or retrieves script content and evaluates it"
+    },
+    {
+      "control": "M05",
+      "category": "repository",
+      "label": "Sensitive-file ignore change",
+      "basis": "gitignore explicitly reincludes a private environment file"
+    },
+    {
+      "control": "M06",
+      "category": "repository",
+      "label": "Suspicious config loader",
+      "basis": "build or lint configuration has combined code-loader traits"
+    },
+    {
+      "control": "M07",
+      "category": "host",
+      "label": "Known loader artifacts",
+      "basis": "specific npm-ws loader artifact filenames exist in home directory"
+    },
+    {
+      "control": "M08",
+      "category": "dependency",
+      "label": "Known malicious npm release",
+      "basis": "exact resolved package and release appears in a known published advisory"
+    },
+    {
+      "control": "M09",
+      "category": "repository",
+      "label": "Unusual propagation script",
+      "basis": "unexpected auto-push batch file exists; content not executed"
+    }
+  ],
+  "npm_exact_releases": [
+    {
+      "package": "@adminide-stack/client-redux",
+      "version": "0.0.16-18"
+    },
+    {
+      "package": "@adminide-stack/health-api-server",
+      "version": "0.0.18-alpha.465"
+    },
+    {
+      "package": "@adminide-stack/user-activity-browser",
+      "version": "1.1.3-alpha.114"
+    },
+    {
+      "package": "@adminide-stack/utils",
+      "version": "0.0.16-129"
+    },
+    {
+      "package": "@adminide-stack/utils",
+      "version": "0.0.16-130"
+    },
+    {
+      "package": "server-hemera-mongo",
+      "version": "0.0.15"
+    },
+    {
+      "package": "server-hemera-mongo",
+      "version": "0.0.16"
+    },
+    {
+      "package": "cdeops",
+      "version": "13.5.31"
+    },
+    {
+      "package": "@adminide-stack/forms-core",
+      "version": "5.1.9-alpha.3"
+    },
+    {
+      "package": "@adminide-stack/yantra-help-browser",
+      "version": "12.0.194"
+    },
+    {
+      "package": "@cdmbase/wiki-browser",
+      "version": "12.0.18-alpha.53"
+    },
+    {
+      "package": "@pubngo-stack/help-browser",
+      "version": "12.0.23-alpha.3"
+    }
+  ],
+  "known_limits": [
+    "Only exact npm package versions are matched; no semver range inference.",
+    "A matching lockfile entry cannot prove execution or credential theft.",
+    "Pattern matches are leads, not confirmation of compromise.",
+    "Changed remote branches and running process persistence require separate evidence.",
+    "Do not execute scripts or contact command-and-control infrastructure."
+  ]
+}

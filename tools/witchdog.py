@@ -2,6 +2,7 @@
 """Witch Dog: read-only, bounded host and multi-Git-repository inventory."""
 import argparse
 import datetime
+import importlib.util
 import json
 import os
 import platform
@@ -11,7 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 SKIP = {".git", ".witchdog", "node_modules", ".venv", "venv", ".next",
         "__pycache__", "dist", "build", "vendor", "target", ".terraform"}
 SECRET = re.compile(r"(^|/)(\.env(?:\.[^/]*)?|\.npmrc|id_rsa|id_ed25519|[^/]*\.(?:pem|p12|pfx|key))$", re.I)
@@ -31,6 +32,17 @@ def small(path):
     except OSError:
         return None
 
+def developer_guard_module():
+    """Load only the trusted Witch Dog module, never a file in the target repo."""
+    path = Path(__file__).resolve().with_name("developer_guard.py")
+    spec = importlib.util.spec_from_file_location("_witchdog_developer_guard", path)
+    if spec is None or spec.loader is None:
+        raise ValueError("Developer malware guard unavailable")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def host():
     system = platform.system()
     hints = []
@@ -48,6 +60,13 @@ def host():
                 break
     tools = ["git", "python", "python3", "docker", "kubectl", "virsh", "qemu-img",
              "powershell", "pwsh", "opencode"]
+    try:
+        malware_artifacts = developer_guard_module().scan_home()
+    except (OSError, ValueError, TypeError):
+        malware_artifacts = {
+            "status": "UNKNOWN", "artifact_names": [], "paths_checked": 0,
+            "note": "Developer loader filename checks were unavailable",
+        }
     return {
         "evidence_class": "HOST_OBSERVED", "system": system,
         "release": safe(platform.release(), 70), "architecture": safe(platform.machine(), 50),
@@ -55,6 +74,7 @@ def host():
         "tools_present_not_authorized": {x: bool(shutil.which(x)) for x in tools},
         "running_services": "NOT_INSPECTED", "guests": "NOT_INSPECTED",
         "remote_hosts": "NOT_INSPECTED",
+        "developer_loader_artifacts": malware_artifacts,
     }
 
 def discover(root, max_repos=25, depth_limit=4):
@@ -171,24 +191,49 @@ def inspect(repo, root):
                     finding(out, "F06", status, p + ":" + str(n), reason)
     if ".gitmodules" in files:
         finding(out, "F01", "WARN", ".gitmodules", "Verify gitlink, tracked branch and built artifact alignment")
+    try:
+        guard = developer_guard_module().scan_repo(repo, files)
+        for item in guard["findings"]:
+            if len(out) < 120:
+                out.append(item)
+    except (OSError, ValueError, TypeError, KeyError):
+        guard = {
+            "status": "UNKNOWN", "checked_files": 0, "checked_npm_locks": 0,
+            "findings": [], "coverage_gaps": ["Developer guard could not run"],
+            "scope": "NOT_INSPECTED",
+        }
+        finding(out, "M00", "UNKNOWN", "developer malware patterns",
+                "Developer guard unavailable; no malware-clearance claim")
     finding(out, "A03", "UNKNOWN", "source vs deployed runtime",
             "No authenticated deployed-image/commit/digest evidence was collected")
     finding(out, "A02", "UNKNOWN", "listeners and network reachability",
             "Live service and network probes are not part of this baseline scanner")
     return {"repo": safe(repo.relative_to(root)), "tracked_count": len(files),
-            "evidence_class": "SOURCE_DECLARED", "findings": out}
+            "evidence_class": "SOURCE_DECLARED", "findings": out,
+            "developer_guard": {
+                "status": guard["status"],
+                "checked_files": guard["checked_files"],
+                "checked_npm_locks": guard["checked_npm_locks"],
+                "coverage_gaps": guard["coverage_gaps"],
+                "scope": guard["scope"],
+            }}
 
 def report_md(doc):
     lines = ["# Witch Dog local audit", "",
              "> PRIVATE LOCAL REPORT. Do not publish client information in public Witch Dog issues.", "",
              "UTC: " + doc["timestamp_utc"], "",
              "Host: " + safe(doc["host"]["system"]) + " / " + safe(doc["host"]["release"]), "",
-             "Running services, guest VMs and remote assets: **NOT INSPECTED**.", ""]
+             "Running services, guest VMs and remote assets: **NOT INSPECTED**.",
+             "Known home loader artifacts: " +
+             safe(doc["host"].get("developer_loader_artifacts", {}).get("status", "UNKNOWN")),
+             ""]
     for gap in doc["coverage_gaps"]:
         lines.append("- Coverage gap: " + safe(gap))
     for repo in doc["repos"]:
         lines.extend(["", "## " + repo["repo"], "",
                       "| Control | Status | Evidence | Explanation |", "|---|---|---|---|"])
+        for gap in repo.get("developer_guard", {}).get("coverage_gaps", []):
+            lines.append("- Developer guard coverage gap: " + safe(gap))
         for item in repo["findings"]:
             lines.append("| " + item["control"] + " | " + item["status"] + " | " +
                          item["evidence"] + " | " + item["reason"] + " |")
@@ -206,7 +251,7 @@ def scan(root, output, max_repos):
     if not repos:
         data["coverage_gaps"].append("No git roots found in authorized scan scope")
     for path in repos:
-        if path.name != "witchdog":
+        if path.resolve() != Path(__file__).resolve().parents[1]:
             data["repos"].append(inspect(path, root))
     output = output.expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)

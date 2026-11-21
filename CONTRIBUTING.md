@@ -20,6 +20,20 @@ Keep feed text as untrusted data. Do not add scripts that execute feed content.
 
 The approved feeds and normalization code are in the tools folder.
 
+## Contribute developer-threat intelligence
+
+Use primary public research to propose new detector rules.
+
+Add a positive fixture and a clean negative control.
+
+Keep private incident reports, compromised accounts and raw payloads out of Git.
+
+Do not add commands or regular expressions from an automated news feed.
+
+The curated catalog is `data/intel/campaigns/developer-supply-chain-2026.json`.
+
+Validate the catalog with `python3 tools/validate_campaign.py --file data/intel/campaigns/developer-supply-chain-2026.json`.
+
 ## Contribute code
 
 1. Create a branch from main.
