@@ -134,7 +134,7 @@ class DeveloperGuardTests(unittest.TestCase):
             controls = {x["control"] for x in result["findings"]}
             self.assertIn("M01", controls)
             self.assertIn("M09", controls)
-            self.assertNotIn("M08", controls)  # Lockfile not known through index.
+            self.assertIn("M08", controls)  # Known local lockfile is checked even when untracked.
 
     def test_missing_catalog_is_unknown_not_negative(self):
         with tempfile.TemporaryDirectory() as folder:
